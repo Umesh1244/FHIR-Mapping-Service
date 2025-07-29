@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   fhir-mapper:
     build:
@@ -11,6 +12,7 @@ services:
       - docker_network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    restart: unless-stopped
 
 networks:
   docker_network:
