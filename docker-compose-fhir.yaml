@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     image: fhir-mapper
     ports:
-      - '8085:8085'
+      - '8083:8083'
     networks:
       - docker_network
     extra_hosts:
