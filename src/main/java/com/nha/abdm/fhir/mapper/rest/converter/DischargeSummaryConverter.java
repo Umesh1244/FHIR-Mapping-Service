@@ -193,9 +193,12 @@ public class DischargeSummaryConverter {
                           makeDocumentReference(patient, organization, documentResource)))
               .toList();
 
-      CarePlan carePlan =
-          makeCarePlanResource.getCarePlan(dischargeSummaryRequest.getCarePlan(), patient);
+      CarePlan carePlan = null;
+  if (dischargeSummaryRequest.getCarePlan() != null) {
+        carePlan = makeCarePlanResource.getCarePlan(dischargeSummaryRequest.getCarePlan(), patient);
+      }
 
+     
       Composition composition =
           makeDischargeComposition.makeDischargeCompositionResource(
               patient,
