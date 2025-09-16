@@ -15,14 +15,14 @@ import java.util.UUID;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import java.math.BigDecimal;
 
 @Component
 public class MakeFamilyMemberResource {
 
   @Autowired SnomedService snomedService;
 
-  
-    public FamilyMemberHistory getFamilyHistory(
+public FamilyMemberHistory getFamilyHistory(
       Patient patient, FamilyObservationResource familyObservationResource) throws ParseException {
     HumanName patientName = patient.getName().get(0);
     FamilyMemberHistory familyMemberHistory = new FamilyMemberHistory();
@@ -78,7 +78,6 @@ public class MakeFamilyMemberResource {
                               .setDisplay(snomedCondition.getDisplay()))
                       .setText(snomedCondition.getDisplay())));
     }
-    Boolean didContributeToDeath = familyObservationResource.getIsDeceased();
     FamilyMemberHistory.FamilyMemberHistoryConditionComponent conditionComponent =
         new FamilyMemberHistory.FamilyMemberHistoryConditionComponent()
             .setCode(
@@ -90,14 +89,28 @@ public class MakeFamilyMemberResource {
                             .setDisplay(snomedCondition.getDisplay()))
                     .setText(snomedCondition.getDisplay()));
 
+    Boolean didContributeToDeath = familyObservationResource.getIsDeceased();
     if (didContributeToDeath != null) {
       conditionComponent.setContributedToDeath(didContributeToDeath);
     }
+
+    Long onsetAge = familyObservationResource.getAge();
+    if (onsetAge != null) {
+      conditionComponent.setOnset(
+          new Age()
+              .setValue(new BigDecimal(onsetAge))
+              .setUnit("years")
+              .setSystem("http://unitsofmeasure.org")
+              .setCode("a"));
+    }
+
     familyMemberHistory.setDateElement(
         Utils.getFormattedDateTime(familyObservationResource.getDate()));
     familyMemberHistory.addCondition(conditionComponent);
     return familyMemberHistory;
-  }
+  }  
+
+
 
   private String mapGenderToFhirCode(String gender) {
     if (gender == null) return "unknown";

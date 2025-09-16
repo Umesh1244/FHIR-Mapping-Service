@@ -466,7 +466,7 @@ public class OPConsultationConverter {
     return Optional.ofNullable(opConsultationRequest.getAllergies())
         .orElse(Collections.emptyList())
         .stream()
-        .filter(allergy -> allergy.isBlank() && allergy.isEmpty())
+        .filter(allergy -> !allergy.isBlank())
         .map(
             StreamUtils.wrapException(
                 allergy ->
