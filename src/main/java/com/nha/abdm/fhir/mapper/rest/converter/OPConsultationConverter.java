@@ -394,13 +394,13 @@ public class OPConsultationConverter {
                                       .setReference(
                                           BundleResourceIdentifier.PATIENT + "/" + patient.getId()))
                               .setStatus(Appointment.ParticipationStatus.ACCEPTED)));
-                
-	     	  if(item.getAppointmentEndTime()!=null){
-                   appointment.setEnd(Utils.getFormattedDateTime(item.getAppointmentEndTime())
-                           .getValue());
-                 }
 
-		  appointment.setStart(
+                  if (item.getAppointmentEndTime() != null) {
+                    appointment.setEnd(
+                        Utils.getFormattedDateTime(item.getAppointmentEndTime()).getValue());
+                  }
+
+                  appointment.setStart(
                       Utils.getFormattedDateTime(item.getAppointmentTime())
                           .getValue()); // TODO in UTC format
                   appointment.addReasonCode(new CodeableConcept().setText(item.getReason()));
@@ -463,15 +463,18 @@ public class OPConsultationConverter {
       List<Practitioner> practitionerList,
       OPConsultationRequest opConsultationRequest)
       throws ParseException {
-    return Optional.ofNullable(opConsultationRequest.getAllergies())
-        .orElse(Collections.emptyList())
-        .stream()
-        .filter(allergy -> !allergy.isBlank())
+
+    return opConsultationRequest.getAllergies().stream()
+        .filter(Objects::nonNull)
         .map(
             StreamUtils.wrapException(
                 allergy ->
                     makeAllergyToleranceResource.getAllergy(
-                        patient, practitionerList, allergy, opConsultationRequest.getVisitDate())))
+                        patient,
+                        practitionerList,
+                        allergy.getName(),
+                        opConsultationRequest.getVisitDate(),
+                        allergy.getVerificationStatus())))
         .toList();
   }
 

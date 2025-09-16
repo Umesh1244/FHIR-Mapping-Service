@@ -41,7 +41,7 @@ public class OPConsultationRequest {
 
   @Valid private List<ChiefComplaintResource> chiefComplaints;
   @Valid private List<ObservationResource> physicalExaminations;
-  private List<String> allergies;
+
   @Valid private List<ChiefComplaintResource> medicalHistories;
   @Valid private List<FamilyObservationResource> familyHistories;
   @Valid private List<ServiceRequestResource> serviceRequests;
@@ -57,4 +57,5 @@ public class OPConsultationRequest {
   @Valid private List<ServiceRequestResource> referrals;
   @Valid private List<ObservationResource> otherObservations;
   @Valid private List<DocumentResource> documents;
+  private List<AllergyResouce> allergies;
 }

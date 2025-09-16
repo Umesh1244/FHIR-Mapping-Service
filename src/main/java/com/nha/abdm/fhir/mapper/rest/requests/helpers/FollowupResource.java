@@ -17,5 +17,4 @@ public class FollowupResource {
   private String appointmentTime;
   private String appointmentEndTime;
   private String reason;
-
 }

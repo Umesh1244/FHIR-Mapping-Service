@@ -17,7 +17,11 @@ public class MakeAllergyToleranceResource {
   @Autowired SnomedService snomedService;
 
   public AllergyIntolerance getAllergy(
-      Patient patient, List<Practitioner> practitionerList, String allergy, String authoredOn)
+      Patient patient,
+      List<Practitioner> practitionerList,
+      String allergy,
+      String authoredOn,
+      String verificationStatusValue)
       throws ParseException {
     HumanName patientName = patient.getName().get(0);
     AllergyIntolerance allergyIntolerance = new AllergyIntolerance();
@@ -45,6 +49,17 @@ public class MakeAllergyToleranceResource {
     CodeableConcept clinicalStatus = new CodeableConcept();
     clinicalStatus.addCoding(clinicalStatusCoding);
     allergyIntolerance.setClinicalStatus(clinicalStatus);
+
+    Coding verificationStatusCoding =
+        new Coding()
+            .setSystem("http://terminology.hl7.org/CodeSystem/allergyintolerance-verification")
+            .setCode(verificationStatusValue)
+            .setDisplay(
+                verificationStatusValue.substring(0, 1).toUpperCase()
+                    + verificationStatusValue.substring(1)); // e.g., confirmed → Confirmed
+    allergyIntolerance.setVerificationStatus(
+        new CodeableConcept().addCoding(verificationStatusCoding));
+
     if (authoredOn != null)
       allergyIntolerance.setRecordedDateElement(Utils.getFormattedDateTime(authoredOn));
     allergyIntolerance.setType(AllergyIntolerance.AllergyIntoleranceType.ALLERGY);

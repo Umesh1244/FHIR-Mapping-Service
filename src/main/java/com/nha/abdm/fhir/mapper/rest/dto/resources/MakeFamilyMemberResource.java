@@ -9,20 +9,20 @@ import com.nha.abdm.fhir.mapper.rest.common.constants.SnomedCodeIdentifier;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
 import com.nha.abdm.fhir.mapper.rest.database.h2.tables.SnomedObservation;
 import com.nha.abdm.fhir.mapper.rest.requests.helpers.FamilyObservationResource;
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.Objects;
 import java.util.UUID;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import java.math.BigDecimal;
 
 @Component
 public class MakeFamilyMemberResource {
 
   @Autowired SnomedService snomedService;
 
-public FamilyMemberHistory getFamilyHistory(
+  public FamilyMemberHistory getFamilyHistory(
       Patient patient, FamilyObservationResource familyObservationResource) throws ParseException {
     HumanName patientName = patient.getName().get(0);
     FamilyMemberHistory familyMemberHistory = new FamilyMemberHistory();
@@ -50,9 +50,6 @@ public FamilyMemberHistory getFamilyHistory(
     if (Objects.nonNull(familyObservationResource.getObservation())) {
       snomedCondition =
           snomedService.getSnomedObservationCode(familyObservationResource.getObservation());
-
-      familyMemberHistory.setAge(
-          new Age().setValue(familyObservationResource.getAge()).setUnit("years").setCode("a"));
       String gender = familyObservationResource.getGender();
       if (Objects.nonNull(gender)) {
         CodeableConcept genderCodeableConcept = new CodeableConcept();
@@ -108,9 +105,7 @@ public FamilyMemberHistory getFamilyHistory(
         Utils.getFormattedDateTime(familyObservationResource.getDate()));
     familyMemberHistory.addCondition(conditionComponent);
     return familyMemberHistory;
-  }  
-
-
+  }
 
   private String mapGenderToFhirCode(String gender) {
     if (gender == null) return "unknown";

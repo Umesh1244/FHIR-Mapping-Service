@@ -194,11 +194,10 @@ public class DischargeSummaryConverter {
               .toList();
 
       CarePlan carePlan = null;
-  if (dischargeSummaryRequest.getCarePlan() != null) {
+      if (dischargeSummaryRequest.getCarePlan() != null) {
         carePlan = makeCarePlanResource.getCarePlan(dischargeSummaryRequest.getCarePlan(), patient);
       }
 
-     
       Composition composition =
           makeDischargeComposition.makeDischargeCompositionResource(
               patient,
@@ -408,17 +407,19 @@ public class DischargeSummaryConverter {
       List<Practitioner> practitionerList,
       DischargeSummaryRequest dischargeSummaryRequest)
       throws ParseException {
-    return Optional.ofNullable(dischargeSummaryRequest.getAllergies())
-        .orElse(Collections.emptyList())
-        .stream()
+    if (dischargeSummaryRequest.getAllergies() == null) {
+      return Collections.emptyList();
+    }
+    return dischargeSummaryRequest.getAllergies().stream()
         .map(
             StreamUtils.wrapException(
                 allergy ->
                     makeAllergyToleranceResource.getAllergy(
                         patient,
                         practitionerList,
-                        allergy,
-                        dischargeSummaryRequest.getAuthoredOn())))
+                        allergy.getName(),
+                        dischargeSummaryRequest.getAuthoredOn(),
+                        allergy.getVerificationStatus())))
         .toList();
   }
 
