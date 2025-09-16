@@ -394,7 +394,13 @@ public class OPConsultationConverter {
                                       .setReference(
                                           BundleResourceIdentifier.PATIENT + "/" + patient.getId()))
                               .setStatus(Appointment.ParticipationStatus.ACCEPTED)));
-                  appointment.setStart(
+                
+	     	  if(item.getAppointmentEndTime()!=null){
+                   appointment.setEnd(Utils.getFormattedDateTime(item.getAppointmentEndTime())
+                           .getValue());
+                 }
+
+		  appointment.setStart(
                       Utils.getFormattedDateTime(item.getAppointmentTime())
                           .getValue()); // TODO in UTC format
                   appointment.addReasonCode(new CodeableConcept().setText(item.getReason()));

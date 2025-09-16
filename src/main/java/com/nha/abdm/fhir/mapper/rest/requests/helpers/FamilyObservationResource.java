@@ -15,4 +15,8 @@ import lombok.NoArgsConstructor;
 public class FamilyObservationResource {
   private String relationship;
   private String observation;
+  private Long age;
+  private String gender;
+  private Boolean isDeceased;
+  private String date;
 }

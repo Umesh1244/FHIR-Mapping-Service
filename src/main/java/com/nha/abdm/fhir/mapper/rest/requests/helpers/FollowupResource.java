@@ -15,5 +15,7 @@ import lombok.NoArgsConstructor;
 public class FollowupResource {
   private String serviceType;
   private String appointmentTime;
+  private String appointmentEndTime;
   private String reason;
+
 }

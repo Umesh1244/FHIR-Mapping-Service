@@ -21,7 +21,8 @@ public class MakeFamilyMemberResource {
 
   @Autowired SnomedService snomedService;
 
-  public FamilyMemberHistory getFamilyHistory(
+  
+    public FamilyMemberHistory getFamilyHistory(
       Patient patient, FamilyObservationResource familyObservationResource) throws ParseException {
     HumanName patientName = patient.getName().get(0);
     FamilyMemberHistory familyMemberHistory = new FamilyMemberHistory();
@@ -45,9 +46,27 @@ public class MakeFamilyMemberResource {
                       .setDisplay(familyObservationResource.getRelationship()))
               .setText(familyObservationResource.getRelationship()));
     }
+    SnomedObservation snomedCondition = null;
     if (Objects.nonNull(familyObservationResource.getObservation())) {
-      SnomedObservation snomedCondition =
+      snomedCondition =
           snomedService.getSnomedObservationCode(familyObservationResource.getObservation());
+
+      familyMemberHistory.setAge(
+          new Age().setValue(familyObservationResource.getAge()).setUnit("years").setCode("a"));
+      String gender = familyObservationResource.getGender();
+      if (Objects.nonNull(gender)) {
+        CodeableConcept genderCodeableConcept = new CodeableConcept();
+        String genderCode = mapGenderToFhirCode(gender);
+        genderCodeableConcept
+            .addCoding(
+                new Coding()
+                    .setSystem("http://hl7.org/fhir/administrative-gender")
+                    .setCode(genderCode)
+                    .setDisplay(capitalizeFirst(genderCode)))
+            .setText(capitalizeFirst(genderCode));
+
+        familyMemberHistory.setSex(genderCodeableConcept);
+      }
       familyMemberHistory.addCondition(
           new FamilyMemberHistory.FamilyMemberHistoryConditionComponent()
               .setCode(
@@ -59,6 +78,47 @@ public class MakeFamilyMemberResource {
                               .setDisplay(snomedCondition.getDisplay()))
                       .setText(snomedCondition.getDisplay())));
     }
+    Boolean didContributeToDeath = familyObservationResource.getIsDeceased();
+    FamilyMemberHistory.FamilyMemberHistoryConditionComponent conditionComponent =
+        new FamilyMemberHistory.FamilyMemberHistoryConditionComponent()
+            .setCode(
+                new CodeableConcept()
+                    .addCoding(
+                        new Coding()
+                            .setSystem(BundleUrlIdentifier.SNOMED_URL)
+                            .setCode(snomedCondition.getCode())
+                            .setDisplay(snomedCondition.getDisplay()))
+                    .setText(snomedCondition.getDisplay()));
+
+    if (didContributeToDeath != null) {
+      conditionComponent.setContributedToDeath(didContributeToDeath);
+    }
+    familyMemberHistory.setDateElement(
+        Utils.getFormattedDateTime(familyObservationResource.getDate()));
+    familyMemberHistory.addCondition(conditionComponent);
     return familyMemberHistory;
+  }
+
+  private String mapGenderToFhirCode(String gender) {
+    if (gender == null) return "unknown";
+
+    switch (gender.toLowerCase().trim()) {
+      case "male":
+      case "m":
+        return "male";
+      case "female":
+      case "f":
+        return "female";
+      case "other":
+      case "o":
+        return "other";
+      default:
+        return "unknown";
+    }
+  }
+
+  private String capitalizeFirst(String str) {
+    if (str == null || str.isEmpty()) return str;
+    return str.substring(0, 1).toUpperCase() + str.substring(1);
   }
 }
