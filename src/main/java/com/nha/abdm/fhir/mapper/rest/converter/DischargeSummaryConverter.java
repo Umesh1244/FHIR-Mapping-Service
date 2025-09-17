@@ -301,7 +301,7 @@ public class DischargeSummaryConverter {
         entries.add(
             new Bundle.BundleEntryComponent()
                 .setFullUrl(
-                    BundleResourceIdentifier.FAMILY_HISTORY + "/" + medicationRequest.getId())
+                    BundleResourceIdentifier.MEDICATION_REQUEST + "/" + medicationRequest.getId())
                 .setResource(medicationRequest));
       }
 
