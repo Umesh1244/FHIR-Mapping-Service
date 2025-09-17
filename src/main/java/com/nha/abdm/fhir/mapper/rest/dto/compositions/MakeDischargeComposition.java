@@ -235,7 +235,7 @@ public class MakeDischargeComposition {
             new Reference()
                 .setReference(
                     BundleResourceIdentifier.MEDICATION_REQUEST
-                        + BundleResourceIdentifier.FAMILY_HISTORY
+
                         + "/"
                         + medicationRequest.getId()));
       }

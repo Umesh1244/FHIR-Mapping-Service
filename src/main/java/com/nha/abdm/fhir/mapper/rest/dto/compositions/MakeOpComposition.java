@@ -236,7 +236,8 @@ public class MakeOpComposition {
       for (MedicationRequest medication : medicationList) {
         sectionComponent.addEntry(
             new Reference()
-                .setReference(BundleResourceIdentifier.FAMILY_HISTORY + "/" + medication.getId()));
+                .setReference(
+                    BundleResourceIdentifier.MEDICATION_REQUEST + "/" + medication.getId()));
       }
       sectionComponentList.add(sectionComponent);
     }
