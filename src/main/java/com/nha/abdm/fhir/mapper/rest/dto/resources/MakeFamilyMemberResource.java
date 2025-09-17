@@ -46,25 +46,25 @@ public class MakeFamilyMemberResource {
                       .setDisplay(familyObservationResource.getRelationship()))
               .setText(familyObservationResource.getRelationship()));
     }
-    SnomedObservation snomedCondition = null;
-    if (Objects.nonNull(familyObservationResource.getObservation())) {
-      snomedCondition =
-          snomedService.getSnomedObservationCode(familyObservationResource.getObservation());
-      String gender = familyObservationResource.getGender();
-      if (Objects.nonNull(gender)) {
-        CodeableConcept genderCodeableConcept = new CodeableConcept();
-        String genderCode = mapGenderToFhirCode(gender);
-        genderCodeableConcept
-            .addCoding(
-                new Coding()
-                    .setSystem("http://hl7.org/fhir/administrative-gender")
-                    .setCode(genderCode)
-                    .setDisplay(capitalizeFirst(genderCode)))
-            .setText(capitalizeFirst(genderCode));
+    String gender = familyObservationResource.getGender();
+    if (Objects.nonNull(gender)) {
+      CodeableConcept genderCodeableConcept = new CodeableConcept();
+      String genderCode = mapGenderToFhirCode(gender);
+      genderCodeableConcept
+          .addCoding(
+              new Coding()
+                  .setSystem("http://hl7.org/fhir/administrative-gender")
+                  .setCode(genderCode)
+                  .setDisplay(capitalizeFirst(genderCode)))
+          .setText(capitalizeFirst(genderCode));
 
-        familyMemberHistory.setSex(genderCodeableConcept);
-      }
-      familyMemberHistory.addCondition(
+      familyMemberHistory.setSex(genderCodeableConcept);
+    }
+    if (Objects.nonNull(familyObservationResource.getObservation())) {
+      SnomedObservation snomedCondition =
+          snomedService.getSnomedObservationCode(familyObservationResource.getObservation());
+
+      FamilyMemberHistory.FamilyMemberHistoryConditionComponent conditionComponent =
           new FamilyMemberHistory.FamilyMemberHistoryConditionComponent()
               .setCode(
                   new CodeableConcept()
@@ -73,37 +73,29 @@ public class MakeFamilyMemberResource {
                               .setSystem(BundleUrlIdentifier.SNOMED_URL)
                               .setCode(snomedCondition.getCode())
                               .setDisplay(snomedCondition.getDisplay()))
-                      .setText(snomedCondition.getDisplay())));
-    }
-    FamilyMemberHistory.FamilyMemberHistoryConditionComponent conditionComponent =
-        new FamilyMemberHistory.FamilyMemberHistoryConditionComponent()
-            .setCode(
-                new CodeableConcept()
-                    .addCoding(
-                        new Coding()
-                            .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                            .setCode(snomedCondition.getCode())
-                            .setDisplay(snomedCondition.getDisplay()))
-                    .setText(snomedCondition.getDisplay()));
+                      .setText(snomedCondition.getDisplay()));
 
-    Boolean didContributeToDeath = familyObservationResource.getIsDeceased();
-    if (didContributeToDeath != null) {
-      conditionComponent.setContributedToDeath(didContributeToDeath);
-    }
+      // Handle contributedToDeath
+      Boolean didContributeToDeath = familyObservationResource.getIsDeceased();
+      if (didContributeToDeath != null) {
+        conditionComponent.setContributedToDeath(didContributeToDeath);
+      }
 
-    Long onsetAge = familyObservationResource.getAge();
-    if (onsetAge != null) {
-      conditionComponent.setOnset(
-          new Age()
-              .setValue(new BigDecimal(onsetAge))
-              .setUnit("years")
-              .setSystem("http://unitsofmeasure.org")
-              .setCode("a"));
-    }
+      // Handle age
+      Long onsetAge = familyObservationResource.getAge();
+      if (onsetAge != null && onsetAge > 0) {
+        conditionComponent.setOnset(
+            new Age()
+                .setValue(new BigDecimal(onsetAge))
+                .setUnit("years")
+                .setSystem("http://unitsofmeasure.org")
+                .setCode("a"));
+      }
 
+      familyMemberHistory.addCondition(conditionComponent);
+    }
     familyMemberHistory.setDateElement(
         Utils.getFormattedDateTime(familyObservationResource.getDate()));
-    familyMemberHistory.addCondition(conditionComponent);
     return familyMemberHistory;
   }
 

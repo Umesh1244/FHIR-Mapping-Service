@@ -399,7 +399,8 @@ public class OPConsultationConverter {
                     appointment.setEnd(
                         Utils.getFormattedDateTime(item.getAppointmentEndTime()).getValue());
                   }
-
+                  appointment.setDescription(
+                      "Discussion On the results of your recent Lab Test and further treatment plan");
                   appointment.setStart(
                       Utils.getFormattedDateTime(item.getAppointmentTime())
                           .getValue()); // TODO in UTC format
