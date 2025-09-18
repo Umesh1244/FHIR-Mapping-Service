@@ -1,11 +1,14 @@
 /* (C) 2024 */
 package com.nha.abdm.fhir.mapper.rest.dto.resources;
 
+import com.nha.abdm.fhir.mapper.Utils;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleResourceIdentifier;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleUrlIdentifier;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
 import com.nha.abdm.fhir.mapper.rest.database.h2.tables.SnomedEncounter;
 import com.nha.abdm.fhir.mapper.rest.requests.helpers.CarePlanResource;
+
+import java.text.ParseException;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -18,7 +21,7 @@ public class MakeCarePlanResource {
 
   @Autowired SnomedService snomedService;
 
-  public CarePlan getCarePlan(CarePlanResource carePlanResource, Patient patient) {
+  public CarePlan getCarePlan(CarePlanResource carePlanResource, Patient patient) throws ParseException {
     CarePlan carePlan = new CarePlan();
     carePlan.setId(UUID.randomUUID().toString());
     carePlan.setStatus(CarePlan.CarePlanStatus.ACTIVE);
@@ -43,7 +46,16 @@ public class MakeCarePlanResource {
     carePlanCoding.setCode(snomed.getCode());
     codeableConcept.addCoding(carePlanCoding);
     carePlan.setCategory(Collections.singletonList(codeableConcept));
-
+    if (carePlanResource.getPeriod() != null) {
+      Period period = new Period();
+      if (carePlanResource.getPeriod().getFrom() != null) {
+        period.setStart(Utils.getFormattedDate(carePlanResource.getPeriod().getFrom()));
+      }
+      if (carePlanResource.getPeriod().getTo() != null) {
+        period.setEnd(Utils.getFormattedDate(carePlanResource.getPeriod().getTo()));
+      }
+      carePlan.setPeriod(period);
+    }
     if (carePlanResource.getNotes() != null) {
       // Detail
       CarePlan.CarePlanActivityDetailComponent activityDetailComponent =
