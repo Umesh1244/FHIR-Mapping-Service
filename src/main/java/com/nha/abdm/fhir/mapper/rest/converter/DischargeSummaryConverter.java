@@ -194,8 +194,21 @@ public class DischargeSummaryConverter {
               .toList();
 
       CarePlan carePlan = null;
+      Appointment appointment = null;
       if (dischargeSummaryRequest.getCarePlan() != null) {
-        carePlan = makeCarePlanResource.getCarePlan(dischargeSummaryRequest.getCarePlan(), patient);
+        carePlan =
+            makeCarePlanResource.getCarePlan(
+                dischargeSummaryRequest.getCarePlan(),
+                patient,
+                practitionerList.isEmpty()
+                    ? null
+                    : practitionerList.get(0) // Fix: change 'prac' to proper practitioner
+                );
+
+        // Extract appointment from CarePlan if it exists
+        if (carePlan.getUserData("appointment") instanceof Appointment) {
+          appointment = (Appointment) carePlan.getUserData("appointment");
+        }
       }
 
       Composition composition =
@@ -296,6 +309,13 @@ public class DischargeSummaryConverter {
             new Bundle.BundleEntryComponent()
                 .setFullUrl(BundleResourceIdentifier.CARE_PLAN + "/" + carePlan.getId())
                 .setResource(carePlan));
+      }
+      if (Objects.nonNull(appointment)) {
+        entries.add(
+            new Bundle.BundleEntryComponent()
+                .setFullUrl(
+                    "urn:uuid:" + appointment.getId()) // Use urn:uuid format for appointment
+                .setResource(appointment));
       }
       for (MedicationRequest medicationRequest : medicationList) {
         entries.add(

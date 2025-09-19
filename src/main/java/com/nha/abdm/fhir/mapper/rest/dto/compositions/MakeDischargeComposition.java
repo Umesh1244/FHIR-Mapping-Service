@@ -234,10 +234,7 @@ public class MakeDischargeComposition {
         sectionComponent.addEntry(
             new Reference()
                 .setReference(
-                    BundleResourceIdentifier.MEDICATION_REQUEST
-
-                        + "/"
-                        + medicationRequest.getId()));
+                    BundleResourceIdentifier.MEDICATION_REQUEST + "/" + medicationRequest.getId()));
       }
       sectionComponentList.add(sectionComponent);
     }
