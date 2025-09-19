@@ -1,7 +1,6 @@
 /* (C) 2024 */
 package com.nha.abdm.fhir.mapper.rest.dto.resources;
 
-import com.nha.abdm.fhir.mapper.Utils;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleResourceIdentifier;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleUrlIdentifier;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
@@ -69,14 +68,14 @@ public class MakeCarePlanResource {
       appointment.setId(UUID.randomUUID().toString());
       appointment.setStatus(Appointment.AppointmentStatus.BOOKED);
 
-      // Set appointment dates
-      appointment.setStart(Utils.getFormattedDate(carePlanResource.getPeriod().getFrom()));
-      if (carePlanResource.getPeriod().getTo() != null) {
-        appointment.setEnd(Utils.getFormattedDate(carePlanResource.getPeriod().getTo()));
+      if (carePlanResource.getPeriod().getFrom() != null) {
+        appointment.setStartElement(new InstantType(carePlanResource.getPeriod().getFrom()));
       }
-
+      if (carePlanResource.getPeriod().getTo() != null) {
+        appointment.setEndElement(new InstantType(carePlanResource.getPeriod().getTo()));
+      }
       appointment.setDescription("Follow-up visit for " + carePlanResource.getDescription());
-      appointment.setCreated(new Date());
+      //      appointment.setCreated(new Date());
 
       // Add participants
       List<Appointment.AppointmentParticipantComponent> participants = new ArrayList<>();
