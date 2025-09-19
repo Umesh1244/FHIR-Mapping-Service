@@ -116,7 +116,8 @@ public class ImmunizationConverter {
               organization,
               immunizationRequest.getAuthoredOn(),
               immunizationList,
-              documentList);
+              documentList,
+              encounter);
 
       bundle.setId(UUID.randomUUID().toString());
       bundle.setType(Bundle.BundleType.DOCUMENT);

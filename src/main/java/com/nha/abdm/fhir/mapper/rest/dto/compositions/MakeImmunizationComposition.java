@@ -23,7 +23,8 @@ public class MakeImmunizationComposition {
       Organization organization,
       String authoredOn,
       List<Immunization> immunizationList,
-      List<DocumentReference> documentList)
+      List<DocumentReference> documentList,
+      Encounter encounter)
       throws ParseException {
     Composition composition = new Composition();
     Meta meta = new Meta();
@@ -89,6 +90,10 @@ public class MakeImmunizationComposition {
     identifier.setValue(UUID.randomUUID().toString());
     composition.setIdentifier(identifier);
     composition.setId(UUID.randomUUID().toString());
+    if (Objects.nonNull(encounter))
+      composition.setEncounter(
+          new Reference()
+              .setReference(BundleResourceIdentifier.ENCOUNTER + "/" + encounter.getId()));
     return composition;
   }
 }
