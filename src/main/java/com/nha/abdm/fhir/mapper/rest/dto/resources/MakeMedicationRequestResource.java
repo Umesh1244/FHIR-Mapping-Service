@@ -4,8 +4,6 @@ package com.nha.abdm.fhir.mapper.rest.dto.resources;
 import com.nha.abdm.fhir.mapper.Utils;
 import com.nha.abdm.fhir.mapper.rest.common.constants.*;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
-import com.nha.abdm.fhir.mapper.rest.database.h2.tables.SnomedMedicine;
-import com.nha.abdm.fhir.mapper.rest.database.h2.tables.SnomedMedicineRoute;
 import com.nha.abdm.fhir.mapper.rest.requests.helpers.PrescriptionResource;
 import java.text.ParseException;
 import java.util.*;
@@ -34,54 +32,30 @@ public class MakeMedicationRequestResource {
             .addProfile(ResourceProfileIdentifier.PROFILE_MEDICATION_REQUEST)
             .setLastUpdatedElement(Utils.getCurrentTimeStamp()));
 
-    // Setting Medications
-    SnomedMedicine snomedMedicine =
-        snomedService.getSnomedMedicineCode(prescriptionResource.getMedicine());
+    // FIX 1: Setting Medications - TEXT ONLY (remove addCoding)
     medicationRequest.setMedication(
-        new CodeableConcept()
-            .setText(prescriptionResource.getMedicine())
-            .addCoding(
-                new Coding()
-                    .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                    .setCode(snomedMedicine.getCode())
-                    .setDisplay(snomedMedicine.getDisplay())));
+        new CodeableConcept().setText(prescriptionResource.getMedicine()));
+
     if (prescriptionResource.getDosage() != null) {
       Dosage dosage = new Dosage();
       dosage.setText(prescriptionResource.getDosage());
+
+      // FIX 2: Additional Instructions - TEXT ONLY (remove addCoding)
       if (prescriptionResource.getAdditionalInstructions() != null) {
         dosage.addAdditionalInstruction(
-            new CodeableConcept()
-                .setText(prescriptionResource.getAdditionalInstructions())
-                .addCoding(
-                    new Coding()
-                        .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                        .setCode(SnomedCodeIdentifier.SNOMED_UNKNOWN)
-                        .setDisplay(prescriptionResource.getAdditionalInstructions())));
+            new CodeableConcept().setText(prescriptionResource.getAdditionalInstructions()));
       }
+
+      // FIX 3: Route - TEXT ONLY (remove addCoding)
       if (prescriptionResource.getRoute() != null) {
-        SnomedMedicineRoute snomedMedicineRoute =
-            snomedService.getSnomedMedicineRouteCode(prescriptionResource.getRoute());
-        dosage.setRoute(
-            new CodeableConcept()
-                .setText(prescriptionResource.getRoute())
-                .addCoding(
-                    new Coding()
-                        .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                        .setCode(snomedMedicineRoute.getCode())
-                        .setDisplay(snomedMedicine.getDisplay())));
+        dosage.setRoute(new CodeableConcept().setText(prescriptionResource.getRoute()));
       }
+
+      // FIX 4: Method - TEXT ONLY (remove addCoding)
       if (prescriptionResource.getMethod() != null) {
-        SnomedMedicineRoute snomedMethod =
-            snomedService.getSnomedMedicineRouteCode(prescriptionResource.getRoute());
-        dosage.setMethod(
-            new CodeableConcept()
-                .setText(prescriptionResource.getMethod())
-                .addCoding(
-                    new Coding()
-                        .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                        .setCode(snomedMethod.getCode())
-                        .setDisplay(snomedMethod.getDisplay())));
+        dosage.setMethod(new CodeableConcept().setText(prescriptionResource.getMethod()));
       }
+
       if (prescriptionResource.getTiming() != null) {
         String[] parts = prescriptionResource.getTiming().split("-");
         dosage.setTiming(
@@ -94,20 +68,12 @@ public class MakeMedicationRequestResource {
       }
       medicationRequest.setDosageInstruction(Collections.singletonList(dosage));
     }
+
+    // FIX 5: Reason Code - TEXT ONLY (remove addCoding)
     if (medicationCondition != null) {
       medicationRequest.setReasonCode(
           Collections.singletonList(
-              new CodeableConcept()
-                  .addCoding(
-                      new Coding()
-                          .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                          .setCode(
-                              snomedService
-                                  .getConditionProcedureCode(
-                                      medicationCondition.getCode().getText())
-                                  .getCode())
-                          .setDisplay(medicationCondition.getCode().getText()))
-                  .setText(medicationCondition.getCode().getText())));
+              new CodeableConcept().setText(medicationCondition.getCode().getText())));
       medicationRequest.setReasonReference(
           Collections.singletonList(
               new Reference()
@@ -115,6 +81,7 @@ public class MakeMedicationRequestResource {
                       BundleResourceIdentifier.CONDITION + "/" + medicationCondition.getId())
                   .setDisplay(BundleFieldIdentifier.MEDICAL_CONDITION)));
     }
+
     if (!practitioners.isEmpty()) {
       Practitioner practitioner = practitioners.get(0);
       HumanName practitionerName = practitioner.getName().get(0);
@@ -123,15 +90,19 @@ public class MakeMedicationRequestResource {
               .setReference(BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())
               .setDisplay(practitionerName.getText()));
     }
+
     medicationRequest.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
             .setDisplay(patientName.getText()));
+
     if (authoredOn != null)
       medicationRequest.setAuthoredOnElement(Utils.getFormattedDateTime(authoredOn));
+
     medicationRequest.setStatus(MedicationRequest.MedicationRequestStatus.COMPLETED);
     medicationRequest.setIntent(MedicationRequest.MedicationRequestIntent.ORDER);
     medicationRequest.setId(UUID.randomUUID().toString());
+
     return medicationRequest;
   }
 }

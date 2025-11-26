@@ -3,7 +3,6 @@ package com.nha.abdm.fhir.mapper.rest.dto.resources;
 
 import com.nha.abdm.fhir.mapper.Utils;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleResourceIdentifier;
-import com.nha.abdm.fhir.mapper.rest.common.constants.BundleUrlIdentifier;
 import com.nha.abdm.fhir.mapper.rest.common.constants.ResourceProfileIdentifier;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
 import com.nha.abdm.fhir.mapper.rest.database.h2.tables.SnomedDiagnostic;
@@ -41,13 +40,7 @@ public class MakeServiceRequestResource {
     SnomedDiagnostic snomedDiagnostic =
         snomedService.getSnomedDiagnosticCode(serviceRequestResource.getDetails());
     serviceRequest.setCode(
-        new CodeableConcept()
-            .addCoding(
-                new Coding()
-                    .setDisplay(snomedDiagnostic.getDisplay())
-                    .setCode(snomedDiagnostic.getCode())
-                    .setSystem(BundleUrlIdentifier.SNOMED_URL))
-            .setText(serviceRequestResource.getDetails()));
+        new CodeableConcept().setText(serviceRequestResource.getDetails().trim()));
     serviceRequest.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())

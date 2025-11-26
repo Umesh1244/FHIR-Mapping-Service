@@ -4,7 +4,6 @@ package com.nha.abdm.fhir.mapper.rest.dto.resources;
 import com.nha.abdm.fhir.mapper.Utils;
 import com.nha.abdm.fhir.mapper.rest.common.constants.*;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
-import com.nha.abdm.fhir.mapper.rest.database.h2.tables.SnomedConditionProcedure;
 import java.text.ParseException;
 import java.util.List;
 import java.util.UUID;
@@ -31,49 +30,89 @@ public class MakeAllergyToleranceResource {
             .setLastUpdatedElement(Utils.getCurrentTimeStamp())
             .addProfile(ResourceProfileIdentifier.PROFILE_ALLERGY_INTOLERANCE));
 
-    Coding coding = new Coding();
-    SnomedConditionProcedure snomed = snomedService.getConditionProcedureCode(allergy);
-    coding.setSystem(BundleUrlIdentifier.SNOMED_URL);
-    coding.setCode(snomed.getCode());
-    coding.setDisplay(snomed.getDisplay());
+    // TEXT ONLY - No SNOMED coding, just plain text
     CodeableConcept code = new CodeableConcept();
-    code.addCoding(coding);
-    code.setText(snomed.getDisplay());
-
+    code.setText(allergy); // Only use text - NO display name error
     allergyIntolerance.setCode(code);
+
+    // Clinical Status - CORRECT way
     Coding clinicalStatusCoding = new Coding();
-    clinicalStatusCoding.setSystem(ResourceProfileIdentifier.PROFILE_ALLERGY_INTOLERANCE_SYSTEM);
-    clinicalStatusCoding.setCode(BundleFieldIdentifier.ACTIVE);
-    clinicalStatusCoding.setDisplay(BundleFieldIdentifier.ACTIVE);
+    clinicalStatusCoding.setSystem(
+        "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical");
+    clinicalStatusCoding.setCode("active");
+    clinicalStatusCoding.setDisplay("Active");
 
     CodeableConcept clinicalStatus = new CodeableConcept();
     clinicalStatus.addCoding(clinicalStatusCoding);
     allergyIntolerance.setClinicalStatus(clinicalStatus);
 
-    Coding verificationStatusCoding =
-        new Coding()
-            .setSystem("http://terminology.hl7.org/CodeSystem/allergyintolerance-verification")
-            .setCode(verificationStatusValue)
-            .setDisplay(
-                verificationStatusValue.substring(0, 1).toUpperCase()
-                    + verificationStatusValue.substring(1)); // e.g., confirmed → Confirmed
+    // Verification Status - CORRECT way
+    Coding verificationStatusCoding = new Coding();
+    verificationStatusCoding.setSystem(
+        "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification");
+
+    String verificationCode = mapVerificationStatus(verificationStatusValue);
+    verificationStatusCoding.setCode(verificationCode);
+    verificationStatusCoding.setDisplay(capitalizeFirstLetter(verificationCode));
+
     allergyIntolerance.setVerificationStatus(
         new CodeableConcept().addCoding(verificationStatusCoding));
 
     if (authoredOn != null)
       allergyIntolerance.setRecordedDateElement(Utils.getFormattedDateTime(authoredOn));
+
     allergyIntolerance.setType(AllergyIntolerance.AllergyIntoleranceType.ALLERGY);
     allergyIntolerance.setPatient(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
             .setDisplay(patientName.getText()));
+
     if (!(practitionerList.isEmpty())) {
       allergyIntolerance.setRecorder(
           new Reference()
               .setReference(
                   BundleResourceIdentifier.PRACTITIONER + "/" + practitionerList.get(0).getId())
-              .setDisplay(patientName.getText()));
+              .setDisplay(practitionerList.get(0).getName().get(0).getText()));
     }
+
     return allergyIntolerance;
+  }
+
+  /**
+   * Map verification status values to valid FHIR codes Valid codes: unconfirmed, confirmed,
+   * refuted, entered-in-error
+   */
+  private String mapVerificationStatus(String status) {
+    if (status == null) {
+      return "unconfirmed";
+    }
+
+    String lowerStatus = status.toLowerCase().trim();
+
+    switch (lowerStatus) {
+      case "confirmed":
+      case "active":
+        return "confirmed";
+      case "refuted":
+      case "denied":
+      case "false":
+        return "refuted";
+      case "entered-in-error":
+      case "error":
+        return "entered-in-error";
+      case "unconfirmed":
+      case "unverified":
+      case "provisional":
+      default:
+        return "unconfirmed";
+    }
+  }
+
+  /** Capitalize first letter of a string */
+  private String capitalizeFirstLetter(String str) {
+    if (str == null || str.length() == 0) {
+      return str;
+    }
+    return str.substring(0, 1).toUpperCase() + str.substring(1);
   }
 }

@@ -94,92 +94,95 @@ public class MakeWellnessComposition {
       List<Observation> lifeStyleList,
       List<Observation> otherObservationList,
       List<DocumentReference> documentReferenceList) {
+
     List<Composition.SectionComponent> sectionComponentList = new ArrayList<>();
-    if (Objects.nonNull(vitalSignsList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setTitle(BundleCompositionIdentifier.VITAL_SIGNS);
-      for (Observation observation : vitalSignsList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(BundleResourceIdentifier.VITAL_SIGNS + "/" + observation.getId()));
+
+    if (vitalSignsList != null && !vitalSignsList.isEmpty()) {
+      Composition.SectionComponent s = new Composition.SectionComponent();
+      s.setTitle(BundleCompositionIdentifier.VITAL_SIGNS);
+      for (Observation obs : vitalSignsList) {
+        s.addEntry(
+            new Reference().setReference(BundleResourceIdentifier.VITAL_SIGNS + "/" + obs.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      sectionComponentList.add(s);
     }
-    if (Objects.nonNull(bodyMeasurementList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setTitle(BundleCompositionIdentifier.BODY_MEASUREMENT);
-      for (Observation observation : bodyMeasurementList) {
-        sectionComponent.addEntry(
+
+    if (bodyMeasurementList != null && !bodyMeasurementList.isEmpty()) {
+      Composition.SectionComponent s = new Composition.SectionComponent();
+      s.setTitle(BundleCompositionIdentifier.BODY_MEASUREMENT);
+      for (Observation obs : bodyMeasurementList) {
+        s.addEntry(
             new Reference()
-                .setReference(
-                    BundleResourceIdentifier.BODY_MEASUREMENT + "/" + observation.getId()));
+                .setReference(BundleResourceIdentifier.BODY_MEASUREMENT + "/" + obs.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      sectionComponentList.add(s);
     }
-    if (Objects.nonNull(physicalActivityList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setTitle(BundleCompositionIdentifier.PHYSICAL_ACTIVITY);
-      for (Observation observation : physicalActivityList) {
-        sectionComponent.addEntry(
+
+    if (physicalActivityList != null && !physicalActivityList.isEmpty()) {
+      Composition.SectionComponent s = new Composition.SectionComponent();
+      s.setTitle(BundleCompositionIdentifier.PHYSICAL_ACTIVITY);
+      for (Observation obs : physicalActivityList) {
+        s.addEntry(
             new Reference()
-                .setReference(
-                    BundleResourceIdentifier.PHYSICAL_ACTIVITY + "/" + observation.getId()));
+                .setReference(BundleResourceIdentifier.PHYSICAL_ACTIVITY + "/" + obs.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      sectionComponentList.add(s);
     }
-    if (Objects.nonNull(generalAssessmentList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setTitle(BundleCompositionIdentifier.GENERAL_ASSESSMENT);
-      for (Observation observation : generalAssessmentList) {
-        sectionComponent.addEntry(
+
+    if (generalAssessmentList != null && !generalAssessmentList.isEmpty()) {
+      Composition.SectionComponent s = new Composition.SectionComponent();
+      s.setTitle(BundleCompositionIdentifier.GENERAL_ASSESSMENT);
+      for (Observation obs : generalAssessmentList) {
+        s.addEntry(
             new Reference()
-                .setReference(
-                    BundleResourceIdentifier.GENERAL_ASSESSMENT + "/" + observation.getId()));
+                .setReference(BundleResourceIdentifier.GENERAL_ASSESSMENT + "/" + obs.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      sectionComponentList.add(s);
     }
-    if (Objects.nonNull(womanHealthList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setTitle(BundleCompositionIdentifier.WOMEN_HEALTH);
-      for (Observation observation : womanHealthList) {
-        sectionComponent.addEntry(
+
+    if (womanHealthList != null && !womanHealthList.isEmpty()) {
+      Composition.SectionComponent s = new Composition.SectionComponent();
+      s.setTitle(BundleCompositionIdentifier.WOMEN_HEALTH);
+      for (Observation obs : womanHealthList) {
+        s.addEntry(
             new Reference()
-                .setReference(BundleResourceIdentifier.WOMAN_HEALTH + "/" + observation.getId()));
+                .setReference(BundleResourceIdentifier.WOMAN_HEALTH + "/" + obs.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      sectionComponentList.add(s);
     }
-    if (Objects.nonNull(lifeStyleList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setTitle(BundleCompositionIdentifier.LIFE_STYLE);
-      for (Observation observation : lifeStyleList) {
-        sectionComponent.addEntry(
+
+    if (lifeStyleList != null && !lifeStyleList.isEmpty()) {
+      Composition.SectionComponent s = new Composition.SectionComponent();
+      s.setTitle(BundleCompositionIdentifier.LIFE_STYLE);
+      for (Observation obs : lifeStyleList) {
+        s.addEntry(
+            new Reference().setReference(BundleResourceIdentifier.LIFE_STYLE + "/" + obs.getId()));
+      }
+      sectionComponentList.add(s);
+    }
+
+    if (otherObservationList != null && !otherObservationList.isEmpty()) {
+      Composition.SectionComponent s = new Composition.SectionComponent();
+      s.setTitle(BundleCompositionIdentifier.OTHER_OBSERVATIONS);
+      for (Observation obs : otherObservationList) {
+        s.addEntry(
             new Reference()
-                .setReference(BundleResourceIdentifier.LIFE_STYLE + "/" + observation.getId()));
+                .setReference(BundleResourceIdentifier.OTHER_OBSERVATIONS + "/" + obs.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      sectionComponentList.add(s);
     }
-    if (Objects.nonNull(otherObservationList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setTitle(BundleCompositionIdentifier.OTHER_OBSERVATIONS);
-      for (Observation observation : otherObservationList) {
-        sectionComponent.addEntry(
+
+    if (documentReferenceList != null && !documentReferenceList.isEmpty()) {
+      Composition.SectionComponent s = new Composition.SectionComponent();
+      s.setTitle(BundleCompositionIdentifier.DOCUMENT_REFERENCE);
+      for (DocumentReference doc : documentReferenceList) {
+        s.addEntry(
             new Reference()
-                .setReference(
-                    BundleResourceIdentifier.OTHER_OBSERVATIONS + "/" + observation.getId()));
+                .setReference(BundleResourceIdentifier.DOCUMENT_REFERENCE + "/" + doc.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      sectionComponentList.add(s);
     }
-    if (Objects.nonNull(documentReferenceList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setTitle(BundleCompositionIdentifier.DOCUMENT_REFERENCE);
-      for (DocumentReference documentReference : documentReferenceList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.DOCUMENT_REFERENCE + "/" + documentReference.getId()));
-      }
-      sectionComponentList.add(sectionComponent);
-    }
+
     return sectionComponentList;
   }
 }

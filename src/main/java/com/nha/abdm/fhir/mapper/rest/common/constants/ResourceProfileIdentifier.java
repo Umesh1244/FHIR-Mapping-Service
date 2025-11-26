@@ -11,7 +11,7 @@ public class ResourceProfileIdentifier {
   public static final String PROFILE_DOCUMENT_BUNDLE =
       "https://nrces.in/ndhm/fhir/r4/StructureDefinition/DocumentBundle";
   public static final String PROFILE_BUNDLE_META =
-      "http://terminology.hl7.org/CodeSystem/v3-Confidentiality";
+      "http://terminology.hl7.org/CodeSystem/v3-ActCode";
   public static final String PROFILE_CONDITION =
       "https://nrces.in/ndhm/fhir/r4/StructureDefinition/Condition";
   public static final String PROFILE_DIAGNOSTIC_REPORT_LAB =

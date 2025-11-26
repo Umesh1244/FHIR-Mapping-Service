@@ -8,7 +8,6 @@ import com.nha.abdm.fhir.mapper.rest.common.constants.BundleUrlIdentifier;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.stereotype.Service;
@@ -83,9 +82,8 @@ public class MakeOpComposition {
             referralList,
             otherObservationList,
             documentReferenceList);
-    if (Objects.nonNull(sectionComponentList))
-      for (Composition.SectionComponent sectionComponent : sectionComponentList)
-        composition.addSection(sectionComponent);
+    for (Composition.SectionComponent sectionComponent : sectionComponentList)
+      composition.addSection(sectionComponent);
     Identifier identifier = new Identifier();
     identifier.setSystem(BundleUrlIdentifier.WRAPPER_URL);
     identifier.setValue(UUID.randomUUID().toString());
@@ -110,225 +108,166 @@ public class MakeOpComposition {
       List<ServiceRequest> referralList,
       List<Observation> otherObservationList,
       List<DocumentReference> documentReferenceList) {
+
     List<Composition.SectionComponent> sectionComponentList = new ArrayList<>();
-    if (Objects.nonNull(chiefComplaintList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.CHIEF_COMPLAINTS)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.CHIEF_COMPLAINTS_CODE)
-                      .setDisplay(BundleCompositionIdentifier.CHIEF_COMPLAINTS)));
-      for (Condition chiefComplaint : chiefComplaintList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.CHIEF_COMPLAINTS + "/" + chiefComplaint.getId()));
+
+    // Helper to add fallback narrative if no entries exist
+    java.util.function.Consumer<Composition.SectionComponent> ensureSectionHasContent =
+        (section) -> {
+          if (section.getEntry().isEmpty()) {
+            Narrative narrative = new Narrative();
+            narrative.setStatus(Narrative.NarrativeStatus.GENERATED);
+            narrative.setDivAsString("<div>No data available</div>");
+            section.setText(narrative);
+          }
+        };
+
+    // 1 - Chief Complaints
+    if (chiefComplaintList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(new CodeableConcept().setText(BundleCompositionIdentifier.CHIEF_COMPLAINTS));
+      for (Condition item : chiefComplaintList) {
+        section.addEntry(
+            new Reference(BundleResourceIdentifier.CHIEF_COMPLAINTS + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(physicalObservationList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.PHYSICAL_EXAMINATION)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.PHYSICAL_EXAMINATION_CODE)
-                      .setDisplay(BundleCompositionIdentifier.PHYSICAL_EXAMINATION)));
-      for (Observation physicalObservation : physicalObservationList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.PHYSICAL_EXAMINATION
-                        + "/"
-                        + physicalObservation.getId()));
+
+    // 2 - Physical Examination
+    if (physicalObservationList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(
+          new CodeableConcept().setText(BundleCompositionIdentifier.PHYSICAL_EXAMINATION));
+      for (Observation item : physicalObservationList) {
+        section.addEntry(
+            new Reference(BundleResourceIdentifier.PHYSICAL_EXAMINATION + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(allergieList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.ALLERGY_RECORD)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.ALLERGY_RECORD)
-                      .setDisplay(BundleCompositionIdentifier.ALLERGY_RECORD)));
-      for (AllergyIntolerance allergyIntolerance : allergieList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.ALLERGY_INTOLERANCE
-                        + "/"
-                        + allergyIntolerance.getId()));
+
+    // 3 - Allergy
+    if (allergieList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(new CodeableConcept().setText(BundleCompositionIdentifier.ALLERGY_RECORD));
+      for (AllergyIntolerance item : allergieList) {
+        section.addEntry(
+            new Reference(BundleResourceIdentifier.ALLERGY_INTOLERANCE + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(medicalHistoryList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.MEDICAL_HISTORY_SECTION)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.MEDICAL_HISTORY_SECTION)
-                      .setDisplay(BundleCompositionIdentifier.MEDICAL_HISTORY_SECTION)));
-      for (Condition medicalHistory : medicalHistoryList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.MEDICAL_HISTORY + "/" + medicalHistory.getId()));
+
+    // 4 - Medical History
+    if (medicalHistoryList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(
+          new CodeableConcept().setText(BundleCompositionIdentifier.MEDICAL_HISTORY_SECTION));
+      for (Condition item : medicalHistoryList) {
+        section.addEntry(
+            new Reference(BundleResourceIdentifier.MEDICAL_HISTORY + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(familyMemberHistoryList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.FAMILY_HISTORY_SECTION)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.FAMILY_HISTORY_SECTION_CODE)
-                      .setDisplay(BundleCompositionIdentifier.FAMILY_HISTORY_SECTION)));
-      for (FamilyMemberHistory familyMemberHistory : familyMemberHistoryList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.FAMILY_HISTORY + "/" + familyMemberHistory.getId()));
+
+    // 5 - Family History
+    if (familyMemberHistoryList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(
+          new CodeableConcept().setText(BundleCompositionIdentifier.FAMILY_HISTORY_SECTION));
+      for (FamilyMemberHistory item : familyMemberHistoryList) {
+        section.addEntry(
+            new Reference(BundleResourceIdentifier.FAMILY_HISTORY + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(investigationAdviceList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.ORDER_DOCUMENT)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.ORDER_DOCUMENT_CODE)
-                      .setDisplay(BundleCompositionIdentifier.ORDER_DOCUMENT)));
-      for (ServiceRequest investigation : investigationAdviceList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.INVESTIGATION_ADVICE + "/" + investigation.getId()));
+
+    // 6 - Investigation Advice
+    if (investigationAdviceList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(new CodeableConcept().setText(BundleCompositionIdentifier.ORDER_DOCUMENT));
+      for (ServiceRequest item : investigationAdviceList) {
+        section.addEntry(
+            new Reference(BundleResourceIdentifier.INVESTIGATION_ADVICE + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(medicationList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.MEDICATION_SUMMARY)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.MEDICATION_SUMMARY_CODE)
-                      .setDisplay(BundleCompositionIdentifier.MEDICATION_SUMMARY)));
-      for (MedicationRequest medication : medicationList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.MEDICATION_REQUEST + "/" + medication.getId()));
+
+    // 7 - Medication Summary
+    if (medicationList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(
+          new CodeableConcept().setText(BundleCompositionIdentifier.MEDICATION_SUMMARY));
+      for (MedicationRequest item : medicationList) {
+        section.addEntry(
+            new Reference(BundleResourceIdentifier.MEDICATION_REQUEST + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(followupList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.FOLLOW_UP)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.FOLLOW_UP_CODE)
-                      .setDisplay(BundleCompositionIdentifier.FOLLOW_UP)));
-      for (Appointment followUp : followupList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(BundleResourceIdentifier.FOLLOW_UP + "/" + followUp.getId()));
+
+    // 8 - Follow-up
+    if (followupList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(new CodeableConcept().setText(BundleCompositionIdentifier.FOLLOW_UP));
+      for (Appointment item : followupList) {
+        section.addEntry(new Reference(BundleResourceIdentifier.FOLLOW_UP + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(procedureList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.CLINICAL_PROCEDURE)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.CLINICAL_PROCEDURE_CODE)
-                      .setDisplay(BundleCompositionIdentifier.CLINICAL_PROCEDURE)));
-      for (Procedure procedure : procedureList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(BundleResourceIdentifier.PROCEDURE + "/" + procedure.getId()));
+
+    // 9 - Procedure
+    if (procedureList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(
+          new CodeableConcept().setText(BundleCompositionIdentifier.CLINICAL_PROCEDURE));
+      for (Procedure item : procedureList) {
+        section.addEntry(new Reference(BundleResourceIdentifier.PROCEDURE + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(referralList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.REFERRAL_TO_SERVICE)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.REFERRAL_TO_SERVICE_CODE)
-                      .setDisplay(BundleCompositionIdentifier.REFERRAL_TO_SERVICE)));
-      for (ServiceRequest referral : referralList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(BundleResourceIdentifier.REFERRAL + "/" + referral.getId()));
+
+    // 10 - Referral
+    if (referralList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(
+          new CodeableConcept().setText(BundleCompositionIdentifier.REFERRAL_TO_SERVICE));
+      for (ServiceRequest item : referralList) {
+        section.addEntry(new Reference(BundleResourceIdentifier.REFERRAL + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(otherObservationList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.CLINICAL_FINDING)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.CLINICAL_FINDING_CODE)
-                      .setDisplay(BundleCompositionIdentifier.CLINICAL_FINDING)));
-      for (Observation otherObservation : otherObservationList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.OTHER_OBSERVATIONS + "/" + otherObservation.getId()));
+
+    // 11 - Other Observations
+    if (otherObservationList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(new CodeableConcept().setText(BundleCompositionIdentifier.CLINICAL_FINDING));
+      for (Observation item : otherObservationList) {
+        section.addEntry(
+            new Reference(BundleResourceIdentifier.OTHER_OBSERVATIONS + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
-    if (Objects.nonNull(documentReferenceList)) {
-      Composition.SectionComponent sectionComponent = new Composition.SectionComponent();
-      sectionComponent.setCode(
-          new CodeableConcept()
-              .setText(BundleCompositionIdentifier.CLINICAL_CONSULTATION_REPORT)
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(BundleCompositionIdentifier.CLINICAL_CONSULTATION_REPORT_CODE)
-                      .setDisplay(BundleCompositionIdentifier.CLINICAL_CONSULTATION_REPORT)));
-      for (DocumentReference documentReferenceItem : documentReferenceList) {
-        sectionComponent.addEntry(
-            new Reference()
-                .setReference(
-                    BundleResourceIdentifier.DOCUMENT_REFERENCE
-                        + "/"
-                        + documentReferenceItem.getId()));
+
+    // 12 - Document Reference
+    if (documentReferenceList != null) {
+      Composition.SectionComponent section = new Composition.SectionComponent();
+      section.setCode(
+          new CodeableConcept().setText(BundleCompositionIdentifier.CLINICAL_CONSULTATION_REPORT));
+      for (DocumentReference item : documentReferenceList) {
+        section.addEntry(
+            new Reference(BundleResourceIdentifier.DOCUMENT_REFERENCE + "/" + item.getId()));
       }
-      sectionComponentList.add(sectionComponent);
+      ensureSectionHasContent.accept(section);
+      sectionComponentList.add(section);
     }
 
     return sectionComponentList;

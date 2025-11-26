@@ -9,7 +9,6 @@ import com.nha.abdm.fhir.mapper.rest.common.constants.ResourceProfileIdentifier;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.stereotype.Service;
@@ -25,75 +24,79 @@ public class MakePrescriptionComposition {
       List<MedicationRequest> medicationRequestList,
       List<Binary> documentList)
       throws ParseException {
+
     Composition composition = new Composition();
+
     Meta meta = new Meta();
     meta.setVersionId("1");
     meta.setLastUpdatedElement(Utils.getCurrentTimeStamp());
     meta.addProfile(ResourceProfileIdentifier.PROFILE_PRESCRIPTION_RECORD);
     composition.setMeta(meta);
-    CodeableConcept typeCode = new CodeableConcept();
-    Coding typeCoding = new Coding();
-    typeCoding.setSystem(BundleUrlIdentifier.SNOMED_URL);
-    typeCoding.setCode(BundleCompositionIdentifier.PRESCRIPTION_CODE);
-    typeCoding.setDisplay(BundleCompositionIdentifier.PRESCRIPTION);
-    typeCode.addCoding(typeCoding);
-    composition.setType(typeCode);
+
+    composition.setType(new CodeableConcept().setText(BundleCompositionIdentifier.PRESCRIPTION));
     composition.setTitle(BundleCompositionIdentifier.PRESCRIPTION);
-    if (Objects.nonNull(organization))
+
+    if (organization != null) {
       composition.setCustodian(
           new Reference()
               .setReference(BundleResourceIdentifier.ORGANISATION + "/" + organization.getId()));
-    if (Objects.nonNull(encounter))
+    }
+
+    if (encounter != null) {
       composition.setEncounter(
           new Reference()
-              .setReference(BundleResourceIdentifier.ENCOUNTER + "/" + encounter.getId())
-              .setDisplay(encounter.getClass_().getDisplay()));
+              .setReference(BundleResourceIdentifier.ENCOUNTER + "/" + encounter.getId()));
+    }
+
     List<Reference> authorList = new ArrayList<>();
-    HumanName practitionerName = null;
-    for (Practitioner author : practitionerList) {
-      practitionerName = author.getName().get(0);
+    for (Practitioner practitioner : practitionerList) {
+      HumanName name = practitioner.getName().get(0);
       authorList.add(
           new Reference()
-              .setReference(BundleResourceIdentifier.PRACTITIONER + "/" + author.getId())
-              .setDisplay(practitionerName.getText()));
+              .setReference(BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())
+              .setDisplay(name.getText()));
     }
     composition.setAuthor(authorList);
+
     HumanName patientName = patient.getName().get(0);
     composition.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
             .setDisplay(patientName.getText()));
+
     composition.setDateElement(Utils.getFormattedDateTime(authoredOn));
-    Composition.SectionComponent medicationComponent = new Composition.SectionComponent();
-    medicationComponent.setTitle(BundleResourceIdentifier.MEDICATIONS);
-    medicationComponent.setCode(
-        new CodeableConcept()
-            .setText(BundleCompositionIdentifier.PRESCRIPTION)
-            .addCoding(
-                new Coding()
-                    .setCode(BundleCompositionIdentifier.PRESCRIPTION_CODE)
-                    .setDisplay(BundleCompositionIdentifier.PRESCRIPTION)
-                    .setSystem(BundleUrlIdentifier.SNOMED_URL)));
-    for (MedicationRequest medicationRequest : medicationRequestList) {
-      Reference entryReference =
-          new Reference()
-              .setReference(
-                  BundleResourceIdentifier.MEDICATION_REQUEST + "/" + medicationRequest.getId())
-              .setType(BundleResourceIdentifier.MEDICATION_REQUEST);
-      medicationComponent.addEntry(entryReference);
+
+    Composition.SectionComponent medicationSection = new Composition.SectionComponent();
+    medicationSection.setTitle(BundleResourceIdentifier.MEDICATIONS);
+
+    if (medicationRequestList != null && !medicationRequestList.isEmpty()) {
+      for (MedicationRequest mr : medicationRequestList) {
+        medicationSection.addEntry(
+            new Reference()
+                .setReference(BundleResourceIdentifier.MEDICATION_REQUEST + "/" + mr.getId()));
+      }
     }
-    composition.addSection(medicationComponent);
-    for (Binary binary : documentList)
-      medicationComponent.addEntry(
-          new Reference()
-              .setReference(BundleResourceIdentifier.BINARY + "/" + binary.getId())
-              .setType(BundleResourceIdentifier.BINARY));
+
+    if (documentList != null && !documentList.isEmpty()) {
+      for (Binary binary : documentList) {
+        medicationSection.addEntry(
+            new Reference().setReference(BundleResourceIdentifier.BINARY + "/" + binary.getId()));
+      }
+    }
+
+    if (!medicationSection.getEntry().isEmpty()) {
+      composition.addSection(medicationSection);
+    }
+
     composition.setStatus(Composition.CompositionStatus.FINAL);
+
     Identifier identifier = new Identifier();
     identifier.setSystem(BundleUrlIdentifier.WRAPPER_URL);
     identifier.setValue(UUID.randomUUID().toString());
     composition.setIdentifier(identifier);
+
     composition.setId(UUID.randomUUID().toString());
+
     return composition;
   }
 }

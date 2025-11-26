@@ -2,9 +2,7 @@
 package com.nha.abdm.fhir.mapper.rest.dto.resources;
 
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleResourceIdentifier;
-import com.nha.abdm.fhir.mapper.rest.common.constants.BundleUrlIdentifier;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
-import com.nha.abdm.fhir.mapper.rest.database.h2.tables.SnomedEncounter;
 import com.nha.abdm.fhir.mapper.rest.requests.helpers.CarePlanResource;
 import java.text.ParseException;
 import java.util.*;
@@ -21,15 +19,20 @@ public class MakeCarePlanResource {
   public CarePlan getCarePlan(
       CarePlanResource carePlanResource, Patient patient, Practitioner practitioner)
       throws ParseException {
+
     CarePlan carePlan = new CarePlan();
     carePlan.setId(UUID.randomUUID().toString());
     carePlan.setStatus(CarePlan.CarePlanStatus.ACTIVE);
     carePlan.setIntent(CarePlan.CarePlanIntent.fromCode(carePlanResource.getIntent()));
 
+    // Description
     if (carePlanResource.getDescription() != null) {
       carePlan.setDescription(carePlanResource.getDescription());
     }
+
     carePlan.setTitle(carePlanResource.getType());
+
+    // Subject
     carePlan.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
@@ -38,21 +41,21 @@ public class MakeCarePlanResource {
                     .map(HumanName::getText)
                     .collect(Collectors.joining(" "))));
 
-    CodeableConcept codeableConcept = new CodeableConcept();
-    Coding carePlanCoding = new Coding();
-    SnomedEncounter snomed = snomedService.getSnomedEncounterCode(carePlanResource.getType());
-    carePlanCoding.setDisplay(snomed.getDisplay());
-    carePlanCoding.setSystem(BundleUrlIdentifier.SNOMED_URL);
-    carePlanCoding.setCode(snomed.getCode());
-    codeableConcept.addCoding(carePlanCoding);
-    carePlan.setCategory(Collections.singletonList(codeableConcept));
+    // ------------------------------
+    // CATEGORY WITHOUT CODING
+    // ------------------------------
+    CodeableConcept cc = new CodeableConcept();
+    cc.setText(carePlanResource.getType()); // Only text, no coding
+    carePlan.setCategory(Collections.singletonList(cc));
 
+    // Period
     if (carePlanResource.getPeriod() != null) {
       Period period = new Period();
 
       if (carePlanResource.getPeriod().getFrom() != null) {
         period.setStartElement(new DateTimeType(carePlanResource.getPeriod().getFrom()));
       }
+
       if (carePlanResource.getPeriod().getTo() != null) {
         period.setEndElement(new DateTimeType(carePlanResource.getPeriod().getTo()));
       }
@@ -60,87 +63,80 @@ public class MakeCarePlanResource {
       carePlan.setPeriod(period);
     }
 
-    // Create appointment inline if period is available
+    // ------------------------------
+    // Appointment creation (unchanged)
+    // ------------------------------
     Appointment appointment = null;
+
     if (carePlanResource.getPeriod() != null && carePlanResource.getPeriod().getFrom() != null) {
 
       appointment = new Appointment();
       appointment.setId(UUID.randomUUID().toString());
       appointment.setStatus(Appointment.AppointmentStatus.BOOKED);
 
-      if (carePlanResource.getPeriod().getFrom() != null) {
-        appointment.setStartElement(new InstantType(carePlanResource.getPeriod().getFrom()));
-      }
+      appointment.setStartElement(new InstantType(carePlanResource.getPeriod().getFrom()));
+
       if (carePlanResource.getPeriod().getTo() != null) {
         appointment.setEndElement(new InstantType(carePlanResource.getPeriod().getTo()));
       }
-      appointment.setDescription("Follow-up visit for " + carePlanResource.getDescription());
-      //      appointment.setCreated(new Date());
 
-      // Add participants
+      appointment.setDescription("Follow-up visit for " + carePlanResource.getDescription());
+
       List<Appointment.AppointmentParticipantComponent> participants = new ArrayList<>();
 
-      // Patient participant
-      Appointment.AppointmentParticipantComponent patientParticipant =
-          new Appointment.AppointmentParticipantComponent();
-      patientParticipant.setActor(
-          new Reference()
-              .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
-              .setDisplay(
-                  patient.getName().stream()
-                      .map(HumanName::getText)
-                      .collect(Collectors.joining(" "))));
-      patientParticipant.setStatus(Appointment.ParticipationStatus.ACCEPTED);
-      participants.add(patientParticipant);
+      // Patient
+      participants.add(
+          new Appointment.AppointmentParticipantComponent()
+              .setActor(
+                  new Reference()
+                      .setReference("Patient/" + patient.getId())
+                      .setDisplay(patient.getNameFirstRep().getText()))
+              .setStatus(Appointment.ParticipationStatus.ACCEPTED));
 
-      // Practitioner participant
+      // Practitioner
       if (practitioner != null) {
-        Appointment.AppointmentParticipantComponent practitionerParticipant =
-            new Appointment.AppointmentParticipantComponent();
-        practitionerParticipant.setActor(
-            new Reference()
-                .setReference(BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())
-                .setDisplay(
-                    practitioner.getName().stream()
-                        .map(HumanName::getText)
-                        .collect(Collectors.joining(" "))));
-        practitionerParticipant.setStatus(Appointment.ParticipationStatus.ACCEPTED);
-        participants.add(practitionerParticipant);
+        participants.add(
+            new Appointment.AppointmentParticipantComponent()
+                .setActor(
+                    new Reference()
+                        .setReference("Practitioner/" + practitioner.getId())
+                        .setDisplay(practitioner.getNameFirstRep().getText()))
+                .setStatus(Appointment.ParticipationStatus.ACCEPTED));
       }
 
       appointment.setParticipant(participants);
     }
 
-    // Modified activity creation
+    // ------------------------------
+    // Activity Section
+    // ------------------------------
     List<CarePlan.CarePlanActivityComponent> activities = new ArrayList<>();
     CarePlan.CarePlanActivityComponent activity = new CarePlan.CarePlanActivityComponent();
 
-    // Add appointment reference if appointment was created
     if (appointment != null) {
-      Reference appointmentReference = new Reference();
-      appointmentReference.setReference("urn:uuid:" + appointment.getId());
-      activity.setOutcomeReference(Collections.singletonList(appointmentReference));
+      activity.setOutcomeReference(
+          Collections.singletonList(new Reference("urn:uuid:" + appointment.getId())));
     }
 
     if (carePlanResource.getNotes() != null) {
-      // Detail
-      CarePlan.CarePlanActivityDetailComponent activityDetailComponent =
+      CarePlan.CarePlanActivityDetailComponent detail =
           new CarePlan.CarePlanActivityDetailComponent();
-      activityDetailComponent.setDescription(carePlanResource.getNotes());
+      detail.setDescription(carePlanResource.getNotes());
 
-      // Set scheduled period if available
       if (carePlanResource.getPeriod() != null) {
-        Period scheduledPeriod = new Period();
+        Period scheduled = new Period();
+
         if (carePlanResource.getPeriod().getFrom() != null) {
-          scheduledPeriod.setStartElement(new DateTimeType(carePlanResource.getPeriod().getFrom()));
+          scheduled.setStartElement(new DateTimeType(carePlanResource.getPeriod().getFrom()));
         }
         if (carePlanResource.getPeriod().getTo() != null) {
-          scheduledPeriod.setEndElement(new DateTimeType(carePlanResource.getPeriod().getTo()));
+          scheduled.setEndElement(new DateTimeType(carePlanResource.getPeriod().getTo()));
         }
-        activityDetailComponent.setScheduled(scheduledPeriod);
+
+        detail.setScheduled(scheduled);
       }
 
-      activity.setDetail(activityDetailComponent);
+      activity.setDetail(detail);
 
       Annotation annotation = new Annotation();
       annotation.setText(carePlanResource.getNotes());
@@ -150,8 +146,6 @@ public class MakeCarePlanResource {
     activities.add(activity);
     carePlan.setActivity(activities);
 
-    // Store the appointment reference for bundle creation
-    // You can add this as a field in your class or return it separately
     carePlan.setUserData("appointment", appointment);
 
     return carePlan;

@@ -3,11 +3,8 @@ package com.nha.abdm.fhir.mapper.rest.dto.resources;
 
 import com.nha.abdm.fhir.mapper.Utils;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleResourceIdentifier;
-import com.nha.abdm.fhir.mapper.rest.common.constants.BundleUrlIdentifier;
 import com.nha.abdm.fhir.mapper.rest.common.constants.ResourceProfileIdentifier;
-import com.nha.abdm.fhir.mapper.rest.common.constants.SnomedCodeIdentifier;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
-import com.nha.abdm.fhir.mapper.rest.database.h2.tables.SnomedObservation;
 import com.nha.abdm.fhir.mapper.rest.requests.helpers.FamilyObservationResource;
 import java.math.BigDecimal;
 import java.text.ParseException;
@@ -36,16 +33,14 @@ public class MakeFamilyMemberResource {
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
             .setDisplay(patientName.getText()));
+
+    // FIX 1: Relationship - TEXT ONLY (remove addCoding)
     if (Objects.nonNull(familyObservationResource.getRelationship())) {
       familyMemberHistory.setRelationship(
-          new CodeableConcept()
-              .addCoding(
-                  new Coding()
-                      .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                      .setCode(SnomedCodeIdentifier.SNOMED_UNKNOWN)
-                      .setDisplay(familyObservationResource.getRelationship()))
-              .setText(familyObservationResource.getRelationship()));
+          new CodeableConcept().setText(familyObservationResource.getRelationship()));
     }
+
+    // Gender - Keep as is (this uses valid FHIR administrative-gender)
     String gender = familyObservationResource.getGender();
     if (Objects.nonNull(gender)) {
       CodeableConcept genderCodeableConcept = new CodeableConcept();
@@ -60,20 +55,12 @@ public class MakeFamilyMemberResource {
 
       familyMemberHistory.setSex(genderCodeableConcept);
     }
-    if (Objects.nonNull(familyObservationResource.getObservation())) {
-      SnomedObservation snomedCondition =
-          snomedService.getSnomedObservationCode(familyObservationResource.getObservation());
 
+    // FIX 2: Condition Code - TEXT ONLY (remove addCoding)
+    if (Objects.nonNull(familyObservationResource.getObservation())) {
       FamilyMemberHistory.FamilyMemberHistoryConditionComponent conditionComponent =
           new FamilyMemberHistory.FamilyMemberHistoryConditionComponent()
-              .setCode(
-                  new CodeableConcept()
-                      .addCoding(
-                          new Coding()
-                              .setSystem(BundleUrlIdentifier.SNOMED_URL)
-                              .setCode(snomedCondition.getCode())
-                              .setDisplay(snomedCondition.getDisplay()))
-                      .setText(snomedCondition.getDisplay()));
+              .setCode(new CodeableConcept().setText(familyObservationResource.getObservation()));
 
       // Handle contributedToDeath
       Boolean didContributeToDeath = familyObservationResource.getIsDeceased();
@@ -94,6 +81,7 @@ public class MakeFamilyMemberResource {
 
       familyMemberHistory.addCondition(conditionComponent);
     }
+
     familyMemberHistory.setDateElement(
         Utils.getFormattedDateTime(familyObservationResource.getDate()));
     return familyMemberHistory;
