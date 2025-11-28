@@ -22,7 +22,12 @@ public class MakeAllergyToleranceResource {
       String authoredOn,
       String verificationStatusValue)
       throws ParseException {
+
+    String cleanedAllergy = Utils.clean(allergy);
+    String cleanedVerification = Utils.clean(verificationStatusValue);
+
     HumanName patientName = patient.getName().get(0);
+
     AllergyIntolerance allergyIntolerance = new AllergyIntolerance();
     allergyIntolerance.setId(UUID.randomUUID().toString());
     allergyIntolerance.setMeta(
@@ -30,12 +35,10 @@ public class MakeAllergyToleranceResource {
             .setLastUpdatedElement(Utils.getCurrentTimeStamp())
             .addProfile(ResourceProfileIdentifier.PROFILE_ALLERGY_INTOLERANCE));
 
-    // TEXT ONLY - No SNOMED coding, just plain text
     CodeableConcept code = new CodeableConcept();
-    code.setText(allergy); // Only use text - NO display name error
+    code.setText(cleanedAllergy);
     allergyIntolerance.setCode(code);
 
-    // Clinical Status - CORRECT way
     Coding clinicalStatusCoding = new Coding();
     clinicalStatusCoding.setSystem(
         "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical");
@@ -46,12 +49,11 @@ public class MakeAllergyToleranceResource {
     clinicalStatus.addCoding(clinicalStatusCoding);
     allergyIntolerance.setClinicalStatus(clinicalStatus);
 
-    // Verification Status - CORRECT way
     Coding verificationStatusCoding = new Coding();
     verificationStatusCoding.setSystem(
         "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification");
 
-    String verificationCode = mapVerificationStatus(verificationStatusValue);
+    String verificationCode = mapVerificationStatus(cleanedVerification);
     verificationStatusCoding.setCode(verificationCode);
     verificationStatusCoding.setDisplay(capitalizeFirstLetter(verificationCode));
 
@@ -65,23 +67,19 @@ public class MakeAllergyToleranceResource {
     allergyIntolerance.setPatient(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
-            .setDisplay(patientName.getText()));
+            .setDisplay(Utils.clean(patientName.getText())));
 
-    if (!(practitionerList.isEmpty())) {
+    if (!practitionerList.isEmpty()) {
+      Practitioner practitioner = practitionerList.get(0);
       allergyIntolerance.setRecorder(
           new Reference()
-              .setReference(
-                  BundleResourceIdentifier.PRACTITIONER + "/" + practitionerList.get(0).getId())
-              .setDisplay(practitionerList.get(0).getName().get(0).getText()));
+              .setReference(BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())
+              .setDisplay(Utils.clean(practitioner.getName().get(0).getText())));
     }
 
     return allergyIntolerance;
   }
 
-  /**
-   * Map verification status values to valid FHIR codes Valid codes: unconfirmed, confirmed,
-   * refuted, entered-in-error
-   */
   private String mapVerificationStatus(String status) {
     if (status == null) {
       return "unconfirmed";
@@ -108,7 +106,6 @@ public class MakeAllergyToleranceResource {
     }
   }
 
-  /** Capitalize first letter of a string */
   private String capitalizeFirstLetter(String str) {
     if (str == null || str.length() == 0) {
       return str;

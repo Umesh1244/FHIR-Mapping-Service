@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MakeServiceRequestResource {
+
   @Autowired SnomedService snomedService;
 
   public ServiceRequest getServiceRequest(
@@ -25,51 +26,66 @@ public class MakeServiceRequestResource {
       ServiceRequestResource serviceRequestResource,
       String authoredOn)
       throws ParseException {
-    HumanName patientName = patient.getName().get(0);
+
+    HumanName patientName = patient.getNameFirstRep();
+
     ServiceRequest serviceRequest = new ServiceRequest();
     serviceRequest.setId(UUID.randomUUID().toString());
-    serviceRequest.setStatus(
-        ServiceRequest.ServiceRequestStatus.valueOf(serviceRequestResource.getStatus()));
-    serviceRequest.setIntent(ServiceRequest.ServiceRequestIntent.PROPOSAL);
     serviceRequest.setStatus(ServiceRequest.ServiceRequestStatus.ACTIVE);
+    serviceRequest.setIntent(ServiceRequest.ServiceRequestIntent.PROPOSAL);
     serviceRequest.setAuthoredOnElement(Utils.getFormattedDateTime(authoredOn));
     serviceRequest.setMeta(
         new Meta()
             .setLastUpdatedElement(Utils.getCurrentTimeStamp())
             .addProfile(ResourceProfileIdentifier.PROFILE_SERVICE_REQUEST));
+
+    // SNOMED mapping (optional for future coding)
     SnomedDiagnostic snomedDiagnostic =
         snomedService.getSnomedDiagnosticCode(serviceRequestResource.getDetails());
+
+    // TEXT ONLY CODE
     serviceRequest.setCode(
-        new CodeableConcept().setText(serviceRequestResource.getDetails().trim()));
+        new CodeableConcept().setText(Utils.clean(serviceRequestResource.getDetails())));
+
+    // SUBJECT
     serviceRequest.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
-            .setDisplay(patientName.getText()));
+            .setDisplay(Utils.clean(patientName.getText())));
+
+    // PERFORMERS
     List<Reference> performerList = new ArrayList<>();
-    HumanName practitionerName = null;
     for (Practitioner practitioner : practitionerList) {
-      practitionerName = practitioner.getName().get(0);
+      HumanName practitionerName = practitioner.getNameFirstRep();
       performerList.add(
           new Reference()
               .setReference(BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())
-              .setDisplay(practitionerName.getText()));
+              .setDisplay(Utils.clean(practitionerName.getText())));
     }
+
     if (!performerList.isEmpty()) {
-      Practitioner practitioner = practitionerList.get(0);
-      practitionerName = practitioner.getName().get(0);
+      Practitioner requesterPractitioner = practitionerList.get(0);
+      HumanName requesterName = requesterPractitioner.getNameFirstRep();
       serviceRequest.setRequester(
           new Reference()
-              .setReference(BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())
-              .setDisplay(practitionerName.getText()));
+              .setReference(
+                  BundleResourceIdentifier.PRACTITIONER + "/" + requesterPractitioner.getId())
+              .setDisplay(Utils.clean(requesterName.getText())));
     }
+
     serviceRequest.setPerformer(performerList);
-    if (serviceRequestResource.getSpecimen() != null)
+
+    // SPECIMEN
+    if (serviceRequestResource.getSpecimen() != null) {
       serviceRequest.addSpecimen(
           new Reference()
               .setDisplay(
-                  snomedService
-                      .getSnomedSpecimenCode(serviceRequestResource.getSpecimen())
-                      .getDisplay()));
+                  Utils.clean(
+                      snomedService
+                          .getSnomedSpecimenCode(serviceRequestResource.getSpecimen())
+                          .getDisplay())));
+    }
+
     return serviceRequest;
   }
 }

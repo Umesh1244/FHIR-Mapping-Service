@@ -17,39 +17,36 @@ public class MakeConditionResource {
       String conditionDetails, Patient patient, String recordedDate, DateRange dateRange)
       throws ParseException {
 
-    HumanName patientName = patient.getName().get(0);
+    String cleanedDetails = Utils.clean(conditionDetails);
+    String cleanedRecorded = Utils.clean(recordedDate);
 
     Condition condition = new Condition();
     condition.setId(UUID.randomUUID().toString());
 
-    // --------------------------------------------
-    // TEXT-ONLY (NO SNOMED, NO CODING)
-    // --------------------------------------------
-    condition.setCode(new CodeableConcept().setText(conditionDetails));
+    condition.setCode(new CodeableConcept().setText(cleanedDetails));
 
-    // Meta
     condition.setMeta(
         new Meta()
             .setLastUpdatedElement(Utils.getCurrentTimeStamp())
             .addProfile(ResourceProfileIdentifier.PROFILE_CONDITION));
 
-    // Subject Reference
     condition.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
-            .setDisplay(patientName.getText()));
+            .setDisplay(Utils.clean(patient.getName().get(0).getText())));
 
-    // Recorded Date
-    if (recordedDate != null) {
-      condition.setRecordedDateElement(Utils.getFormattedDateTime(recordedDate));
+    if (cleanedRecorded != null) {
+      condition.setRecordedDateElement(Utils.getFormattedDateTime(cleanedRecorded));
     }
 
-    // Onset (Period)
     if (dateRange != null) {
+      String cleanedFrom = Utils.clean(dateRange.getFrom());
+      String cleanedTo = Utils.clean(dateRange.getTo());
+
       condition.setOnset(
           new Period()
-              .setStartElement(Utils.getFormattedDateTime(dateRange.getFrom()))
-              .setEndElement(Utils.getFormattedDateTime(dateRange.getTo())));
+              .setStartElement(Utils.getFormattedDateTime(cleanedFrom))
+              .setEndElement(Utils.getFormattedDateTime(cleanedTo)));
     }
 
     return condition;

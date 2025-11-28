@@ -25,7 +25,9 @@ public class MakeDiagnosticLabResource {
       DiagnosticResource diagnosticResource)
       throws ParseException {
 
-    HumanName patientName = patient.getName().get(0);
+    String serviceName = Utils.clean(diagnosticResource.getServiceName());
+    String serviceCategory = Utils.clean(diagnosticResource.getServiceCategory());
+    String conclusion = Utils.clean(diagnosticResource.getConclusion());
 
     DiagnosticReport diagnosticReport = new DiagnosticReport();
     diagnosticReport.setId(UUID.randomUUID().toString());
@@ -35,47 +37,40 @@ public class MakeDiagnosticLabResource {
             .addProfile(ResourceProfileIdentifier.PROFILE_DIAGNOSTIC_REPORT_LAB));
 
     diagnosticReport.setStatus(DiagnosticReport.DiagnosticReportStatus.FINAL);
+    diagnosticReport.setCode(new CodeableConcept().setText(serviceName));
 
-    diagnosticReport.setCode(new CodeableConcept().setText(diagnosticResource.getServiceName()));
-
-    // Subject
     diagnosticReport.setSubject(
         new Reference()
             .setReference("Patient/" + patient.getId())
-            .setDisplay(patientName.getText()));
+            .setDisplay(Utils.clean(patient.getNameFirstRep().getText())));
 
     if (encounter != null) {
       diagnosticReport.setEncounter(new Reference().setReference("Encounter/" + encounter.getId()));
     }
 
-    // Performer / Interpreter
     for (Practitioner practitioner : practitionerList) {
       String ref = "Practitioner/" + practitioner.getId();
       diagnosticReport.addPerformer(new Reference(ref));
       diagnosticReport.addResultsInterpreter(new Reference(ref));
     }
 
-    diagnosticReport.addCategory(
-        new CodeableConcept().setText(diagnosticResource.getServiceCategory()));
+    diagnosticReport.addCategory(new CodeableConcept().setText(serviceCategory));
 
     for (Observation obs : observationList) {
       diagnosticReport.addResult(new Reference("Observation/" + obs.getId()));
     }
 
-    // Issued date
     if (encounter != null && encounter.getPeriod() != null) {
       diagnosticReport.setIssued(encounter.getPeriod().getStart());
     }
 
-    // Conclusion
-    diagnosticReport.setConclusion(diagnosticResource.getConclusion());
-
-    diagnosticReport.addConclusionCode(
-        new CodeableConcept().setText(diagnosticResource.getConclusion()));
+    diagnosticReport.setConclusion(conclusion);
+    diagnosticReport.addConclusionCode(new CodeableConcept().setText(conclusion));
 
     if (diagnosticResource.getPresentedForm() != null) {
       Attachment attachment = new Attachment();
-      attachment.setContentType(diagnosticResource.getPresentedForm().getContentType());
+      attachment.setContentType(
+          Utils.clean(diagnosticResource.getPresentedForm().getContentType()));
       attachment.setData(diagnosticResource.getPresentedForm().getData());
       diagnosticReport.addPresentedForm(attachment);
     }

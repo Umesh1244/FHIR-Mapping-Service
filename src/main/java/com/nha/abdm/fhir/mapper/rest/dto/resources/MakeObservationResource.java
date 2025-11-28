@@ -19,32 +19,34 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MakeObservationResource {
+
   @Autowired SnomedService snomedService;
   private static final Logger log = LoggerFactory.getLogger(MakeObservationResource.class);
 
   public Observation getObservation(
       Patient patient, List<Practitioner> practitionerList, ObservationResource observationResource)
       throws ParseException {
-    HumanName patientName = patient.getName().get(0);
+
+    String cleanedPatientName = Utils.clean(patient.getNameFirstRep().getText());
+
     Observation observation = new Observation();
     observation.setStatus(Observation.ObservationStatus.FINAL);
 
-    // TEXT ONLY - No SNOMED coding to avoid validation errors
-    observation.setCode(new CodeableConcept().setText(observationResource.getObservation()));
+    observation.setCode(
+        new CodeableConcept().setText(Utils.clean(observationResource.getObservation())));
 
     observation.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
-            .setDisplay(patientName.getText()));
+            .setDisplay(cleanedPatientName));
 
     List<Reference> performerList = new ArrayList<>();
-    HumanName practitionerName = null;
     for (Practitioner practitioner : practitionerList) {
-      practitionerName = practitioner.getName().get(0);
+      String cleanedPractitionerName = Utils.clean(practitioner.getNameFirstRep().getText());
       performerList.add(
           new Reference()
               .setReference(BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())
-              .setDisplay(practitionerName.getText()));
+              .setDisplay(cleanedPractitionerName));
     }
     observation.setPerformer(performerList);
 
@@ -52,12 +54,13 @@ public class MakeObservationResource {
       observation.setValue(
           new Quantity()
               .setValue(observationResource.getValueQuantity().getValue())
-              .setUnit(observationResource.getValueQuantity().getUnit()));
+              .setUnit(Utils.clean(observationResource.getValueQuantity().getUnit())));
     }
 
     if (Objects.nonNull(observation.getValueQuantity())
         && observationResource.getResult() != null) {
-      observation.setValue(new CodeableConcept().setText(observationResource.getResult()));
+      observation.setValue(
+          new CodeableConcept().setText(Utils.clean(observationResource.getResult())));
     }
 
     observation.setId(UUID.randomUUID().toString());

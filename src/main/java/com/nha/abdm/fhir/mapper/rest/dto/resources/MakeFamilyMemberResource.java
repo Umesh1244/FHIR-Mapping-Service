@@ -21,7 +21,9 @@ public class MakeFamilyMemberResource {
 
   public FamilyMemberHistory getFamilyHistory(
       Patient patient, FamilyObservationResource familyObservationResource) throws ParseException {
-    HumanName patientName = patient.getName().get(0);
+
+    String cleanedPatientName = Utils.clean(patient.getNameFirstRep().getText());
+
     FamilyMemberHistory familyMemberHistory = new FamilyMemberHistory();
     familyMemberHistory.setId(UUID.randomUUID().toString());
     familyMemberHistory.setStatus(FamilyMemberHistory.FamilyHistoryStatus.COMPLETED);
@@ -32,43 +34,40 @@ public class MakeFamilyMemberResource {
     familyMemberHistory.setPatient(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
-            .setDisplay(patientName.getText()));
+            .setDisplay(cleanedPatientName));
 
-    // FIX 1: Relationship - TEXT ONLY (remove addCoding)
     if (Objects.nonNull(familyObservationResource.getRelationship())) {
       familyMemberHistory.setRelationship(
-          new CodeableConcept().setText(familyObservationResource.getRelationship()));
+          new CodeableConcept().setText(Utils.clean(familyObservationResource.getRelationship())));
     }
 
-    // Gender - Keep as is (this uses valid FHIR administrative-gender)
     String gender = familyObservationResource.getGender();
     if (Objects.nonNull(gender)) {
+      String fhirGender = mapGenderToFhirCode(gender);
       CodeableConcept genderCodeableConcept = new CodeableConcept();
-      String genderCode = mapGenderToFhirCode(gender);
       genderCodeableConcept
           .addCoding(
               new Coding()
                   .setSystem("http://hl7.org/fhir/administrative-gender")
-                  .setCode(genderCode)
-                  .setDisplay(capitalizeFirst(genderCode)))
-          .setText(capitalizeFirst(genderCode));
+                  .setCode(fhirGender)
+                  .setDisplay(Utils.clean(capitalizeFirst(fhirGender))))
+          .setText(Utils.clean(capitalizeFirst(fhirGender)));
 
       familyMemberHistory.setSex(genderCodeableConcept);
     }
 
-    // FIX 2: Condition Code - TEXT ONLY (remove addCoding)
     if (Objects.nonNull(familyObservationResource.getObservation())) {
       FamilyMemberHistory.FamilyMemberHistoryConditionComponent conditionComponent =
           new FamilyMemberHistory.FamilyMemberHistoryConditionComponent()
-              .setCode(new CodeableConcept().setText(familyObservationResource.getObservation()));
+              .setCode(
+                  new CodeableConcept()
+                      .setText(Utils.clean(familyObservationResource.getObservation())));
 
-      // Handle contributedToDeath
       Boolean didContributeToDeath = familyObservationResource.getIsDeceased();
       if (didContributeToDeath != null) {
         conditionComponent.setContributedToDeath(didContributeToDeath);
       }
 
-      // Handle age
       Long onsetAge = familyObservationResource.getAge();
       if (onsetAge != null && onsetAge > 0) {
         conditionComponent.setOnset(
@@ -83,13 +82,13 @@ public class MakeFamilyMemberResource {
     }
 
     familyMemberHistory.setDateElement(
-        Utils.getFormattedDateTime(familyObservationResource.getDate()));
+        Utils.getFormattedDateTime(Utils.clean(familyObservationResource.getDate())));
+
     return familyMemberHistory;
   }
 
   private String mapGenderToFhirCode(String gender) {
     if (gender == null) return "unknown";
-
     switch (gender.toLowerCase().trim()) {
       case "male":
       case "m":

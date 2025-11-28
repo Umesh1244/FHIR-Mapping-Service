@@ -22,6 +22,8 @@ public class ResourceProfileIdentifier {
       "https://nrces.in/ndhm/fhir/r4/StructureDefinition/Encounter";
   public static final String PROFILE_FAMILY_MEMBER_HISTORY =
       "https://nrces.in/ndhm/fhir/r4/StructureDefinition/FamilyMemberHistory";
+  public static final String PROFILE_IMMUNIZATION_RECORD =
+      "https://nrces.in/ndhm/fhir/r4/StructureDefinition/ImmunizationRecord";
   public static final String PROFILE_IMMUNIZATION =
       "https://nrces.in/ndhm/fhir/r4/StructureDefinition/Immunization";
   public static final String PROFILE_VACCINE_BRAND_NAME =

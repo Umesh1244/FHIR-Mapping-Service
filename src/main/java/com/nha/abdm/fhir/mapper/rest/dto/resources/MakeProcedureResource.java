@@ -35,30 +35,33 @@ public class MakeProcedureResource {
 
     // Patient reference
     procedure.setSubject(
-        new Reference().setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId()));
+        new Reference()
+            .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
+            .setDisplay(Utils.clean(patient.getNameFirstRep().getText())));
 
-    // CODE — This MUST use SNOMED (mandatory for ABDM)
+    // CODE — Mandatory SNOMED coding
     SnomedConditionProcedure snomedProcedure =
         snomedService.getConditionProcedureCode(procedureResource.getProcedureName());
 
     procedure.setCode(
         new CodeableConcept()
-            .setText(procedureResource.getProcedureName())
+            .setText(Utils.clean(procedureResource.getProcedureName()))
             .addCoding(
                 new Coding()
                     .setSystem(BundleUrlIdentifier.SNOMED_URL)
                     .setCode(snomedProcedure.getCode())
-                    .setDisplay(snomedProcedure.getDisplay())));
+                    .setDisplay(Utils.clean(snomedProcedure.getDisplay()))));
 
-    // OUTCOME — ABDM allows free text; coding removed
+    // OUTCOME — free-text ABDM-safe
     if (procedureResource.getOutcome() != null) {
-      procedure.setOutcome(new CodeableConcept().setText(procedureResource.getOutcome()));
+      procedure.setOutcome(
+          new CodeableConcept().setText(Utils.clean(procedureResource.getOutcome())));
     }
 
-    // REASON — ABDM allows free text; coding removed
+    // REASON — free-text ABDM-safe
     if (procedureResource.getProcedureReason() != null) {
       procedure.addReasonCode(
-          new CodeableConcept().setText(procedureResource.getProcedureReason()));
+          new CodeableConcept().setText(Utils.clean(procedureResource.getProcedureReason())));
     }
 
     // Date

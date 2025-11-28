@@ -6,10 +6,7 @@ import com.nha.abdm.fhir.mapper.rest.common.constants.BundleResourceIdentifier;
 import com.nha.abdm.fhir.mapper.rest.common.constants.ResourceProfileIdentifier;
 import com.nha.abdm.fhir.mapper.rest.requests.helpers.ImmunizationResource;
 import java.text.ParseException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import org.hl7.fhir.r4.model.*;
 import org.springframework.stereotype.Component;
 
@@ -18,69 +15,72 @@ public class MakeImmunizationResource {
 
   public Immunization getImmunization(
       Patient patient,
-      List<Practitioner> practitionerList,
-      Organization organization,
+      java.util.List<Practitioner> practitionerList,
+      Organization manufacturer,
       ImmunizationResource immunizationResource)
       throws ParseException {
 
     Immunization immunization = new Immunization();
     immunization.setId(UUID.randomUUID().toString());
 
-    Meta meta = new Meta();
-    meta.setVersionId("1");
-    meta.setLastUpdatedElement(Utils.getCurrentTimeStamp());
-    meta.addProfile(ResourceProfileIdentifier.PROFILE_IMMUNIZATION);
-    immunization.setMeta(meta);
+    // Set profile
+    immunization.setMeta(
+        new Meta()
+            .setLastUpdatedElement(Utils.getCurrentTimeStamp())
+            .addProfile(ResourceProfileIdentifier.PROFILE_IMMUNIZATION));
 
     immunization.setStatus(Immunization.ImmunizationStatus.COMPLETED);
 
-    immunization.setPatient(
-        new Reference().setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId()));
-
-    if (immunizationResource.getDate() != null) {
-      immunization.setOccurrence(Utils.getFormattedDateTime(immunizationResource.getDate()));
+    // REQUIRED: Set patient reference
+    if (Objects.nonNull(patient) && Objects.nonNull(patient.getId())) {
+      immunization.setPatient(
+          new Reference().setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId()));
     }
 
-    if (immunizationResource.getVaccineName() != null) {
-      immunization.addExtension(
-          new Extension()
-              .setValue(new StringType(immunizationResource.getVaccineName()))
-              .setUrl(ResourceProfileIdentifier.PROFILE_VACCINE_BRAND_NAME));
-
-      immunization.setVaccineCode(
-          new CodeableConcept().setText(immunizationResource.getVaccineName()));
+    // REQUIRED: Set occurrence date/time from the 'date' field
+    if (Objects.nonNull(immunizationResource.getDate())) {
+      try {
+        immunization.setOccurrence(new DateTimeType(immunizationResource.getDate()));
+      } catch (Exception e) {
+        // If date parsing fails, use current timestamp
+        immunization.setOccurrence(Utils.getCurrentTimeStamp());
+      }
+    } else {
+      immunization.setOccurrence(Utils.getCurrentTimeStamp());
     }
 
-    immunization.setPrimarySource(true);
-
-    if (immunizationResource.getManufacturer() != null) {
-      immunization.setManufacturer(
-          new Reference()
-              .setReference(BundleResourceIdentifier.MANUFACTURER + "/" + organization.getId())
-              .setDisplay(organization.getName()));
+    // REQUIRED: Set vaccine code from vaccineName
+    if (Objects.nonNull(immunizationResource.getVaccineName())
+        && !immunizationResource.getVaccineName().isEmpty()) {
+      CodeableConcept vaccineCode = new CodeableConcept();
+      vaccineCode.setText(immunizationResource.getVaccineName());
+      immunization.setVaccineCode(vaccineCode);
     }
 
-    if (immunizationResource.getLotNumber() != null) {
+    // Optional: Set lot number if provided
+    if (Objects.nonNull(immunizationResource.getLotNumber())
+        && !immunizationResource.getLotNumber().isEmpty()) {
       immunization.setLotNumber(immunizationResource.getLotNumber());
     }
 
-    if (Objects.nonNull(immunizationResource.getDoseNumber())) {
-      immunization.setDoseQuantity(new Quantity().setValue(immunizationResource.getDoseNumber()));
-
-      immunization.setProtocolApplied(
-          Collections.singletonList(
-              new Immunization.ImmunizationProtocolAppliedComponent()
-                  .setDoseNumber(new PositiveIntType(immunizationResource.getDoseNumber()))));
+    // Optional: Set performer if practitioners are provided
+    if (Objects.nonNull(practitionerList) && !practitionerList.isEmpty()) {
+      for (Practitioner practitioner : practitionerList) {
+        if (Objects.nonNull(practitioner.getId())) {
+          immunization.addPerformer(
+              new Immunization.ImmunizationPerformerComponent()
+                  .setActor(
+                      new Reference()
+                          .setReference(
+                              BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())));
+        }
+      }
     }
 
-    for (Practitioner practitioner : practitionerList) {
-      immunization.addPerformer(
-          new Immunization.ImmunizationPerformerComponent()
-              .setActor(
-                  new Reference()
-                      .setReference(
-                          BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())));
-    }
+    // REMOVED: manufacturer field - not allowed in profile 6.5.0
+    // REMOVED: protocolApplied field - not allowed in profile 6.5.0
+    // Note: If you need to track manufacturer and dose number, consider adding them
+    // as extensions or in a different resource
 
     return immunization;
   }

@@ -16,36 +16,32 @@ public class MakeEncounterResource {
   public Encounter getEncounter(Patient patient, String encounterName, String visitDate)
       throws ParseException {
 
-    HumanName patientName = patient.getName().get(0);
+    String cleanedEncounterName = Utils.clean(encounterName);
+    String cleanedVisitDate = Utils.clean(visitDate);
+    String cleanedDefaultClass = Utils.clean(BundleFieldIdentifier.AMBULATORY);
 
     Encounter encounter = new Encounter();
     encounter.setId(UUID.randomUUID().toString());
     encounter.setStatus(Encounter.EncounterStatus.INPROGRESS);
 
-    // META
     encounter.setMeta(
         new Meta()
             .setLastUpdatedElement(Utils.getCurrentTimeStamp())
             .addProfile(ResourceProfileIdentifier.PROFILE_ENCOUNTER));
 
-    // ------------------------------------------------------
-    // TEXT-ONLY CLASS (NO SYSTEM, NO CODE)
-    // ------------------------------------------------------
     Coding encounterClass = new Coding();
     encounterClass.setDisplay(
-        (encounterName != null && !encounterName.isEmpty())
-            ? encounterName
-            : BundleFieldIdentifier.AMBULATORY);
+        (cleanedEncounterName != null && !cleanedEncounterName.isEmpty())
+            ? cleanedEncounterName
+            : cleanedDefaultClass);
     encounter.setClass_(encounterClass);
 
-    // SUBJECT
     encounter.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
-            .setDisplay(patientName.getText()));
+            .setDisplay(Utils.clean(patient.getNameFirstRep().getText())));
 
-    // PERIOD
-    encounter.setPeriod(new Period().setStartElement(Utils.getFormattedDateTime(visitDate)));
+    encounter.setPeriod(new Period().setStartElement(Utils.getFormattedDateTime(cleanedVisitDate)));
 
     return encounter;
   }

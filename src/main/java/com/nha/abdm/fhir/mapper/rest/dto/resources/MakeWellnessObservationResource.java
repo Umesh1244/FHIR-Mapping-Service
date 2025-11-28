@@ -1,6 +1,7 @@
 /* (C) 2024 */
 package com.nha.abdm.fhir.mapper.rest.dto.resources;
 
+import com.nha.abdm.fhir.mapper.Utils;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleResourceIdentifier;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
 import com.nha.abdm.fhir.mapper.rest.requests.helpers.WellnessObservationResource;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MakeWellnessObservationResource {
+
   @Autowired SnomedService snomedService;
 
   public Observation getObservation(
@@ -20,44 +22,45 @@ public class MakeWellnessObservationResource {
       List<Practitioner> practitionerList,
       WellnessObservationResource observationResource,
       String type) {
-    HumanName patientName = patient.getName().get(0);
+
+    HumanName patientName = patient.getNameFirstRep();
     Observation observation = new Observation();
     observation.setStatus(Observation.ObservationStatus.FINAL);
 
-    // FIX: TEXT ONLY - No SNOMED coding to avoid validation errors
-    CodeableConcept typeCode = new CodeableConcept();
-    typeCode.setText(observationResource.getObservation());
-    observation.setCode(typeCode);
+    // TEXT ONLY - cleaned
+    observation.setCode(
+        new CodeableConcept().setText(Utils.clean(observationResource.getObservation())));
 
+    // SUBJECT
     observation.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
-            .setDisplay(patientName.getText()));
+            .setDisplay(Utils.clean(patientName.getText())));
 
+    // PERFORMERS
     List<Reference> performerList = new ArrayList<>();
-    HumanName practitionerName = null;
     for (Practitioner practitioner : practitionerList) {
-      practitionerName = practitioner.getName().get(0);
+      HumanName practitionerName = practitioner.getNameFirstRep();
       performerList.add(
           new Reference()
               .setReference(BundleResourceIdentifier.PRACTITIONER + "/" + practitioner.getId())
-              .setDisplay(practitionerName.getText()));
+              .setDisplay(Utils.clean(practitionerName.getText())));
     }
     observation.setPerformer(performerList);
 
+    // VALUE - Quantity OR CodeableConcept (text only)
     if (observationResource.getValueQuantity() != null) {
       observation.setValue(
           new Quantity()
               .setValue(observationResource.getValueQuantity().getValue())
               .setUnit(observationResource.getValueQuantity().getUnit()));
-    }
-
-    if (observationResource.getResult() != null) {
-      observation.setValue(new CodeableConcept().setText(observationResource.getResult()));
-      observation.setValue(new StringType(observationResource.getResult()));
+    } else if (observationResource.getResult() != null) {
+      observation.setValue(
+          new CodeableConcept().setText(Utils.clean(observationResource.getResult())));
     }
 
     observation.setId(UUID.randomUUID().toString());
+
     return observation;
   }
 }

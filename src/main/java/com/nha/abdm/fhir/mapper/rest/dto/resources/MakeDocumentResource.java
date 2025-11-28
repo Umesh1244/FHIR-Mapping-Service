@@ -22,21 +22,25 @@ public class MakeDocumentResource {
       String docName)
       throws ParseException {
 
-    HumanName patientName = patient.getName().get(0);
+    String cleanedType = Utils.clean(documentResource.getType());
+    String cleanedContentType = Utils.clean(documentResource.getContentType());
+    String cleanedDocName = Utils.clean(docName);
 
     Identifier identifier = new Identifier();
     identifier.setSystem(BundleUrlIdentifier.FACILITY_URL);
+
     if (organization != null && organization.getId() != null) {
-      identifier.setValue(organization.getId());
+      identifier.setValue(Utils.clean(organization.getId()));
     } else {
       identifier.setValue(UUID.randomUUID().toString());
     }
-    identifier.setType(new CodeableConcept().setText(documentResource.getType()));
+
+    identifier.setType(new CodeableConcept().setText(cleanedType));
 
     Attachment attachment = new Attachment();
-    attachment.setContentType(documentResource.getContentType());
+    attachment.setContentType(cleanedContentType);
     attachment.setData(documentResource.getData());
-    attachment.setTitle(documentResource.getType());
+    attachment.setTitle(cleanedType);
     attachment.setCreationElement(new DateTimeType(Utils.getCurrentTimeStamp().getValueAsString()));
 
     DocumentReference.DocumentReferenceContentComponent content =
@@ -48,6 +52,7 @@ public class MakeDocumentResource {
         new Meta()
             .setLastUpdatedElement(Utils.getCurrentTimeStamp())
             .addProfile(ResourceProfileIdentifier.PROFILE_DOCUMENT_REFERENCE));
+
     documentReference.addIdentifier(identifier);
     documentReference.addContent(content);
     documentReference.setStatus(Enumerations.DocumentReferenceStatus.CURRENT);
@@ -56,9 +61,9 @@ public class MakeDocumentResource {
     documentReference.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
-            .setDisplay(patientName.getText()));
+            .setDisplay(Utils.clean(patient.getNameFirstRep().getText())));
 
-    documentReference.setType(new CodeableConcept().setText(docName));
+    documentReference.setType(new CodeableConcept().setText(cleanedDocName));
 
     return documentReference;
   }

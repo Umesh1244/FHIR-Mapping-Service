@@ -37,4 +37,8 @@ public class Utils {
     dateTimeString = dateTimeString.trim();
     return new DateTimeType(dateTimeString).getValue();
   }
+
+  public static String clean(String value) {
+    return value == null ? null : value.trim().replaceAll("\\s+", " ");
+  }
 }

@@ -5,7 +5,6 @@ import com.nha.abdm.fhir.mapper.Utils;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleCompositionIdentifier;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleResourceIdentifier;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleUrlIdentifier;
-import com.nha.abdm.fhir.mapper.rest.common.constants.ResourceProfileIdentifier;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,15 +26,21 @@ public class MakeImmunizationComposition {
       throws ParseException {
 
     Composition composition = new Composition();
-
     Meta meta = new Meta();
     meta.setVersionId("1");
     meta.setLastUpdatedElement(Utils.getCurrentTimeStamp());
-    meta.addProfile(ResourceProfileIdentifier.PROFILE_IMMUNIZATION);
+    meta.addProfile("https://nrces.in/ndhm/fhir/r4/StructureDefinition/ImmunizationRecord");
     composition.setMeta(meta);
 
-    composition.setType(
-        new CodeableConcept().setText(BundleCompositionIdentifier.IMMUNIZATION_RECORD));
+    // FIX 1: Add both coding and text for Composition type (required by profile)
+    CodeableConcept typeCode = new CodeableConcept();
+    typeCode.addCoding(
+        new Coding()
+            .setSystem(BundleUrlIdentifier.SNOMED_URL)
+            .setCode("41000179103")
+            .setDisplay("Immunization record"));
+    typeCode.setText(BundleCompositionIdentifier.IMMUNIZATION_RECORD);
+    composition.setType(typeCode);
     composition.setTitle(BundleCompositionIdentifier.IMMUNIZATION_RECORD);
 
     if (organization != null) {
@@ -65,11 +70,17 @@ public class MakeImmunizationComposition {
     Composition.SectionComponent immunizationSection = new Composition.SectionComponent();
     immunizationSection.setTitle(BundleCompositionIdentifier.IMMUNIZATION_RECORD);
 
+    // FIX 2: Set section code with text only
+    immunizationSection.setCode(
+        new CodeableConcept().setText(BundleCompositionIdentifier.IMMUNIZATION_RECORD));
+
+    // FIX 3: Add setType() to all section entries
     if (immunizationList != null && !immunizationList.isEmpty()) {
       for (Immunization immunization : immunizationList) {
         immunizationSection.addEntry(
             new Reference()
-                .setReference(BundleResourceIdentifier.IMMUNIZATION + "/" + immunization.getId()));
+                .setReference(BundleResourceIdentifier.IMMUNIZATION + "/" + immunization.getId())
+                .setType("Immunization"));
       }
     }
 
@@ -77,7 +88,8 @@ public class MakeImmunizationComposition {
       for (DocumentReference doc : documentList) {
         immunizationSection.addEntry(
             new Reference()
-                .setReference(BundleResourceIdentifier.DOCUMENT_REFERENCE + "/" + doc.getId()));
+                .setReference(BundleResourceIdentifier.DOCUMENT_REFERENCE + "/" + doc.getId())
+                .setType("DocumentReference"));
       }
     }
 

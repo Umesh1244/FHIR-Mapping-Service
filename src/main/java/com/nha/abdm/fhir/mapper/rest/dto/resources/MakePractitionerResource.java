@@ -13,14 +13,18 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MakePractitionerResource {
+
   public Practitioner getPractitioner(PractitionerResource practitionerResource)
       throws ParseException {
+
     Coding coding = new Coding();
     coding.setCode("MR");
     coding.setSystem(ResourceProfileIdentifier.PROFILE_PROVIDER);
     coding.setDisplay(BundleFieldIdentifier.MEDICAL_RECORD_NUMBER);
+
     CodeableConcept codeableConcept = new CodeableConcept();
     codeableConcept.addCoding(coding);
+
     Identifier identifier = new Identifier();
     identifier.setType(codeableConcept);
     identifier.setSystem(BundleUrlIdentifier.DOCTOR_ID_URL);
@@ -32,13 +36,15 @@ public class MakePractitionerResource {
     meta.addProfile(ResourceProfileIdentifier.PROFILE_PRACTITIONER);
 
     Practitioner practitioner = new Practitioner();
-    practitioner.addName(new HumanName().setText(practitionerResource.getName()));
+    // Clean the name for ABDM-safe free-text
+    practitioner.addName(new HumanName().setText(Utils.clean(practitionerResource.getName())));
     practitioner.setMeta(meta);
     practitioner.addIdentifier(identifier);
     practitioner.setId(
         practitionerResource.getPractitionerId() != null
             ? practitionerResource.getPractitionerId()
             : UUID.randomUUID().toString());
+
     return practitioner;
   }
 }

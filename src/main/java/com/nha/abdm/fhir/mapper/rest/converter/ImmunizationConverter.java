@@ -74,6 +74,7 @@ public class ImmunizationConverter {
                   : null,
               immunizationRequest.getAuthoredOn());
       List<Organization> manufactureList = new ArrayList<>();
+      // In makeImmunizationBundle method, around line 75-85
       List<Immunization> immunizationList =
           Optional.ofNullable(immunizationRequest.getImmunizations())
               .orElse(Collections.emptyList())
@@ -82,13 +83,21 @@ public class ImmunizationConverter {
               .map(
                   StreamUtils.wrapException(
                       immunizationResource -> {
-                        Organization manufacturer =
-                            makeOrganisationResource.getOrganization(
-                                OrganisationResource.builder()
-                                    .facilityId(immunizationResource.getManufacturer())
-                                    .facilityName(immunizationResource.getManufacturer())
-                                    .build());
-                        manufactureList.add(manufacturer);
+                        // Only create manufacturer org if manufacturer is provided
+                        Organization manufacturer = null;
+                        if (Objects.nonNull(immunizationResource.getManufacturer())
+                            && !immunizationResource.getManufacturer().isEmpty()) {
+                          manufacturer =
+                              makeOrganisationResource.getOrganization(
+                                  OrganisationResource.builder()
+                                      .facilityId(immunizationResource.getManufacturer())
+                                      .facilityName(immunizationResource.getManufacturer())
+                                      .build());
+                          // Only add to list if successfully created
+                          if (Objects.nonNull(manufacturer)) {
+                            manufactureList.add(manufacturer);
+                          }
+                        }
                         return makeImmunizationResource.getImmunization(
                             patient, practitionerList, manufacturer, immunizationResource);
                       }))
@@ -157,7 +166,7 @@ public class ImmunizationConverter {
       for (Organization manufacturer : manufactureList) {
         entries.add(
             new Bundle.BundleEntryComponent()
-                .setFullUrl(BundleResourceIdentifier.MANUFACTURER + "/" + manufacturer.getId())
+                .setFullUrl(BundleResourceIdentifier.ORGANISATION + "/" + manufacturer.getId())
                 .setResource(manufacturer));
       }
       for (Immunization immunization : immunizationList) {

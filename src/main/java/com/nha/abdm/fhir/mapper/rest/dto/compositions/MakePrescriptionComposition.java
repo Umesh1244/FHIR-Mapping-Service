@@ -33,7 +33,15 @@ public class MakePrescriptionComposition {
     meta.addProfile(ResourceProfileIdentifier.PROFILE_PRESCRIPTION_RECORD);
     composition.setMeta(meta);
 
-    composition.setType(new CodeableConcept().setText(BundleCompositionIdentifier.PRESCRIPTION));
+    // FIX: Add both coding and text for Composition type
+    CodeableConcept typeCode = new CodeableConcept();
+    typeCode.addCoding(
+        new Coding()
+            .setSystem(BundleUrlIdentifier.SNOMED_URL)
+            .setCode("440545006")
+            .setDisplay("Prescription record"));
+    typeCode.setText(BundleCompositionIdentifier.PRESCRIPTION);
+    composition.setType(typeCode);
     composition.setTitle(BundleCompositionIdentifier.PRESCRIPTION);
 
     if (organization != null) {
@@ -69,18 +77,23 @@ public class MakePrescriptionComposition {
     Composition.SectionComponent medicationSection = new Composition.SectionComponent();
     medicationSection.setTitle(BundleResourceIdentifier.MEDICATIONS);
 
+    // FIX 1: Add MedicationRequest entries with setType()
     if (medicationRequestList != null && !medicationRequestList.isEmpty()) {
       for (MedicationRequest mr : medicationRequestList) {
         medicationSection.addEntry(
             new Reference()
-                .setReference(BundleResourceIdentifier.MEDICATION_REQUEST + "/" + mr.getId()));
+                .setReference(BundleResourceIdentifier.MEDICATION_REQUEST + "/" + mr.getId())
+                .setType("MedicationRequest"));
       }
     }
 
+    // FIX 2: Add Binary entries with setType()
     if (documentList != null && !documentList.isEmpty()) {
       for (Binary binary : documentList) {
         medicationSection.addEntry(
-            new Reference().setReference(BundleResourceIdentifier.BINARY + "/" + binary.getId()));
+            new Reference()
+                .setReference(BundleResourceIdentifier.BINARY + "/" + binary.getId())
+                .setType("Binary"));
       }
     }
 

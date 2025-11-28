@@ -10,15 +10,15 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MakeBundleMetaResource {
+
   public Meta getMeta() throws ParseException {
     Meta meta = new Meta();
     meta.setVersionId("1");
     meta.setLastUpdatedElement(Utils.getCurrentTimeStamp());
     meta.addProfile(ResourceProfileIdentifier.PROFILE_DOCUMENT_BUNDLE);
 
-    // TEXT-ONLY SECURITY (NO SYSTEM, NO CODE)
     Coding security = new Coding();
-    security.setDisplay("restricted"); // or any word you prefer
+    security.setDisplay(Utils.clean("restricted"));
 
     meta.addSecurity(security);
 

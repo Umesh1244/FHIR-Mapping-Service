@@ -1,6 +1,7 @@
 /* (C) 2024 */
 package com.nha.abdm.fhir.mapper.rest.dto.resources;
 
+import com.nha.abdm.fhir.mapper.Utils;
 import com.nha.abdm.fhir.mapper.rest.common.constants.BundleResourceIdentifier;
 import com.nha.abdm.fhir.mapper.rest.database.h2.services.SnomedService;
 import com.nha.abdm.fhir.mapper.rest.requests.helpers.CarePlanResource;
@@ -23,39 +24,36 @@ public class MakeCarePlanResource {
     CarePlan carePlan = new CarePlan();
     carePlan.setId(UUID.randomUUID().toString());
     carePlan.setStatus(CarePlan.CarePlanStatus.ACTIVE);
-    carePlan.setIntent(CarePlan.CarePlanIntent.fromCode(carePlanResource.getIntent()));
+    carePlan.setIntent(CarePlan.CarePlanIntent.fromCode(Utils.clean(carePlanResource.getIntent())));
 
-    // Description
-    if (carePlanResource.getDescription() != null) {
-      carePlan.setDescription(carePlanResource.getDescription());
+    String cleanedDescription = Utils.clean(carePlanResource.getDescription());
+    String cleanedType = Utils.clean(carePlanResource.getType());
+    String cleanedNotes = Utils.clean(carePlanResource.getNotes());
+
+    if (cleanedDescription != null) {
+      carePlan.setDescription(cleanedDescription);
     }
 
-    carePlan.setTitle(carePlanResource.getType());
+    carePlan.setTitle(cleanedType);
 
-    // Subject
     carePlan.setSubject(
         new Reference()
             .setReference(BundleResourceIdentifier.PATIENT + "/" + patient.getId())
             .setDisplay(
                 patient.getName().stream()
-                    .map(HumanName::getText)
+                    .map(n -> Utils.clean(n.getText()))
                     .collect(Collectors.joining(" "))));
 
-    // ------------------------------
-    // CATEGORY WITHOUT CODING
-    // ------------------------------
     CodeableConcept cc = new CodeableConcept();
-    cc.setText(carePlanResource.getType()); // Only text, no coding
+    cc.setText(cleanedType);
     carePlan.setCategory(Collections.singletonList(cc));
 
-    // Period
     if (carePlanResource.getPeriod() != null) {
       Period period = new Period();
 
       if (carePlanResource.getPeriod().getFrom() != null) {
         period.setStartElement(new DateTimeType(carePlanResource.getPeriod().getFrom()));
       }
-
       if (carePlanResource.getPeriod().getTo() != null) {
         period.setEndElement(new DateTimeType(carePlanResource.getPeriod().getTo()));
       }
@@ -63,9 +61,6 @@ public class MakeCarePlanResource {
       carePlan.setPeriod(period);
     }
 
-    // ------------------------------
-    // Appointment creation (unchanged)
-    // ------------------------------
     Appointment appointment = null;
 
     if (carePlanResource.getPeriod() != null && carePlanResource.getPeriod().getFrom() != null) {
@@ -73,43 +68,37 @@ public class MakeCarePlanResource {
       appointment = new Appointment();
       appointment.setId(UUID.randomUUID().toString());
       appointment.setStatus(Appointment.AppointmentStatus.BOOKED);
-
       appointment.setStartElement(new InstantType(carePlanResource.getPeriod().getFrom()));
 
       if (carePlanResource.getPeriod().getTo() != null) {
         appointment.setEndElement(new InstantType(carePlanResource.getPeriod().getTo()));
       }
 
-      appointment.setDescription("Follow-up visit for " + carePlanResource.getDescription());
+      appointment.setDescription(Utils.clean("Follow-up visit for " + cleanedDescription));
 
       List<Appointment.AppointmentParticipantComponent> participants = new ArrayList<>();
 
-      // Patient
       participants.add(
           new Appointment.AppointmentParticipantComponent()
               .setActor(
                   new Reference()
                       .setReference("Patient/" + patient.getId())
-                      .setDisplay(patient.getNameFirstRep().getText()))
+                      .setDisplay(Utils.clean(patient.getNameFirstRep().getText())))
               .setStatus(Appointment.ParticipationStatus.ACCEPTED));
 
-      // Practitioner
       if (practitioner != null) {
         participants.add(
             new Appointment.AppointmentParticipantComponent()
                 .setActor(
                     new Reference()
                         .setReference("Practitioner/" + practitioner.getId())
-                        .setDisplay(practitioner.getNameFirstRep().getText()))
+                        .setDisplay(Utils.clean(practitioner.getNameFirstRep().getText())))
                 .setStatus(Appointment.ParticipationStatus.ACCEPTED));
       }
 
       appointment.setParticipant(participants);
     }
 
-    // ------------------------------
-    // Activity Section
-    // ------------------------------
     List<CarePlan.CarePlanActivityComponent> activities = new ArrayList<>();
     CarePlan.CarePlanActivityComponent activity = new CarePlan.CarePlanActivityComponent();
 
@@ -118,10 +107,10 @@ public class MakeCarePlanResource {
           Collections.singletonList(new Reference("urn:uuid:" + appointment.getId())));
     }
 
-    if (carePlanResource.getNotes() != null) {
+    if (cleanedNotes != null) {
       CarePlan.CarePlanActivityDetailComponent detail =
           new CarePlan.CarePlanActivityDetailComponent();
-      detail.setDescription(carePlanResource.getNotes());
+      detail.setDescription(cleanedNotes);
 
       if (carePlanResource.getPeriod() != null) {
         Period scheduled = new Period();
@@ -139,7 +128,7 @@ public class MakeCarePlanResource {
       activity.setDetail(detail);
 
       Annotation annotation = new Annotation();
-      annotation.setText(carePlanResource.getNotes());
+      annotation.setText(cleanedNotes);
       carePlan.setNote(Collections.singletonList(annotation));
     }
 
